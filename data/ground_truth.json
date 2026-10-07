@@ -1,0 +1,767 @@
+{
+  "start_balance": 30000.0,
+  "total_rows": 77,
+  "transactions": [
+    {
+      "date": "2026-07-01",
+      "narration": "NEFT-ACME TECH SOLUTIONS-SALARY-602276804025",
+      "amount": 45000.0,
+      "type": "credit",
+      "merchant": "Salary",
+      "category": "Income",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-07-03",
+      "narration": "NETFLIX.COM MUMBAI 016525808631",
+      "amount": 649.0,
+      "type": "debit",
+      "merchant": "Netflix",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-07-04",
+      "narration": "UBER TRIP 225078951691",
+      "amount": 424.0,
+      "type": "debit",
+      "merchant": "Uber",
+      "category": "Transport",
+      "tag": null
+    },
+    {
+      "date": "2026-07-04",
+      "narration": "UPI/RAPIDO/585113878822/paytm",
+      "amount": 41.0,
+      "type": "debit",
+      "merchant": "Rapido",
+      "category": "Transport",
+      "tag": null
+    },
+    {
+      "date": "2026-07-05",
+      "narration": "NEFT-RENT-HOUSE OWNER-329500167403",
+      "amount": 12000.0,
+      "type": "debit",
+      "merchant": "Rent",
+      "category": "Rent",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-07-07",
+      "narration": "UPI/UBER INDIA/557055819015/axisbank",
+      "amount": 197.0,
+      "type": "debit",
+      "merchant": "Uber",
+      "category": "Transport",
+      "tag": null
+    },
+    {
+      "date": "2026-07-08",
+      "narration": "UPI-SPOTIFY-AUTOPAY-930086875935",
+      "amount": 119.0,
+      "type": "debit",
+      "merchant": "Spotify",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-07-08",
+      "narration": "UPI/BIGBASKET/500653263216/okhdfc",
+      "amount": 965.0,
+      "type": "debit",
+      "merchant": "BigBasket",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-07-09",
+      "narration": "UPI/SURESH B/516851319995/okaxis",
+      "amount": 300,
+      "type": "debit",
+      "merchant": "Suresh B",
+      "category": "Transfers",
+      "tag": null
+    },
+    {
+      "date": "2026-07-10",
+      "narration": "UPI/FITNESS FIRST GYM/868570220212/okaxis",
+      "amount": 1500.0,
+      "type": "debit",
+      "merchant": "Gym",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-07-12",
+      "narration": "UPI/DISNEY HOTSTAR/633229661713/okhdfc",
+      "amount": 299.0,
+      "type": "debit",
+      "merchant": "Hotstar",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-07-14",
+      "narration": "UPI/ZOMATO/891039726776/okhdfc",
+      "amount": 433.0,
+      "type": "debit",
+      "merchant": "Zomato",
+      "category": "Food Delivery",
+      "tag": null
+    },
+    {
+      "date": "2026-07-15",
+      "narration": "UPI/AIRTEL PREPAID/965687203229/airtel",
+      "amount": 399.0,
+      "type": "debit",
+      "merchant": "Airtel",
+      "category": "Bills and Utilities",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-07-16",
+      "narration": "UPI/ZOMATO/063480660781/okhdfc",
+      "amount": 600.0,
+      "type": "debit",
+      "merchant": "Zomato",
+      "category": "Food Delivery",
+      "tag": null
+    },
+    {
+      "date": "2026-07-17",
+      "narration": "ATM WDL 980765261449 CHENNAI",
+      "amount": 2000,
+      "type": "debit",
+      "merchant": "ATM",
+      "category": "Other",
+      "tag": null
+    },
+    {
+      "date": "2026-07-18",
+      "narration": "ZOMATO ONLINE ORDER 148088065007",
+      "amount": 413.0,
+      "type": "debit",
+      "merchant": "Zomato",
+      "category": "Food Delivery",
+      "tag": null
+    },
+    {
+      "date": "2026-07-19",
+      "narration": "UPI/RAPIDO/700035245785/paytm",
+      "amount": 63.0,
+      "type": "debit",
+      "merchant": "Rapido",
+      "category": "Transport",
+      "tag": null
+    },
+    {
+      "date": "2026-07-20",
+      "narration": "APPLE.COM/BILL 836394225258",
+      "amount": 75.0,
+      "type": "debit",
+      "merchant": "iCloud",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-07-20",
+      "narration": "UPI/OLA CABS/976736384200/okicici",
+      "amount": 215.0,
+      "type": "debit",
+      "merchant": "Ola",
+      "category": "Transport",
+      "tag": null
+    },
+    {
+      "date": "2026-07-20",
+      "narration": "UPI/SRI MURUGAN STORES/659182871223/okicici",
+      "amount": 493.0,
+      "type": "debit",
+      "merchant": "Sri Murugan Stores",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-07-24",
+      "narration": "BB DAILY 173041938826",
+      "amount": 1535.0,
+      "type": "debit",
+      "merchant": "BigBasket",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-07-25",
+      "narration": "UPI/UBER INDIA/499022988318/axisbank",
+      "amount": 427.0,
+      "type": "debit",
+      "merchant": "Uber",
+      "category": "Transport",
+      "tag": null
+    },
+    {
+      "date": "2026-07-25",
+      "narration": "UPI-SWIGGY-979217141974@icici",
+      "amount": 430.0,
+      "type": "debit",
+      "merchant": "Swiggy",
+      "category": "Food Delivery",
+      "tag": null
+    },
+    {
+      "date": "2026-07-28",
+      "narration": "UPI/SRI MURUGAN STORES/290680319147/okicici",
+      "amount": 176.0,
+      "type": "debit",
+      "merchant": "Sri Murugan Stores",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-08-01",
+      "narration": "NEFT-ACME TECH SOLUTIONS-SALARY-320735683082",
+      "amount": 45000.0,
+      "type": "credit",
+      "merchant": "Salary",
+      "category": "Income",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-08-03",
+      "narration": "NETFLIX.COM MUMBAI 590537491810",
+      "amount": 649.0,
+      "type": "debit",
+      "merchant": "Netflix",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-08-03",
+      "narration": "BB DAILY 044438411566",
+      "amount": 1108.0,
+      "type": "debit",
+      "merchant": "BigBasket",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-08-04",
+      "narration": "ZOMATO ONLINE ORDER 157124795211",
+      "amount": 555.0,
+      "type": "debit",
+      "merchant": "Zomato",
+      "category": "Food Delivery",
+      "tag": null
+    },
+    {
+      "date": "2026-08-05",
+      "narration": "NEFT-RENT-HOUSE OWNER-888728645911",
+      "amount": 12000.0,
+      "type": "debit",
+      "merchant": "Rent",
+      "category": "Rent",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-08-06",
+      "narration": "UPI/BOOKMYSHOW/738720907476/okhdfc",
+      "amount": 518.0,
+      "type": "debit",
+      "merchant": "BookMyShow",
+      "category": "Entertainment",
+      "tag": null
+    },
+    {
+      "date": "2026-08-06",
+      "narration": "UPI/ZOMATO/295618485441/okhdfc",
+      "amount": 337.0,
+      "type": "debit",
+      "merchant": "Zomato",
+      "category": "Food Delivery",
+      "tag": null
+    },
+    {
+      "date": "2026-08-08",
+      "narration": "UPI-SPOTIFY-AUTOPAY-458697149966",
+      "amount": 119.0,
+      "type": "debit",
+      "merchant": "Spotify",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-08-10",
+      "narration": "UPI/FITNESS FIRST GYM/195636516371/okaxis",
+      "amount": 1500.0,
+      "type": "debit",
+      "merchant": "Gym",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-08-12",
+      "narration": "UPI/DISNEY HOTSTAR/548327634657/okhdfc",
+      "amount": 299.0,
+      "type": "debit",
+      "merchant": "Hotstar",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-08-13",
+      "narration": "UPI/DIVYA M/158263687505/okaxis",
+      "amount": 1500,
+      "type": "debit",
+      "merchant": "Divya M",
+      "category": "Transfers",
+      "tag": null
+    },
+    {
+      "date": "2026-08-14",
+      "narration": "UPI/SURESH B/778424367789/okaxis",
+      "amount": 1500,
+      "type": "debit",
+      "merchant": "Suresh B",
+      "category": "Transfers",
+      "tag": null
+    },
+    {
+      "date": "2026-08-14",
+      "narration": "UPI/SWIGGY/813750214104/okaxis",
+      "amount": 389,
+      "type": "debit",
+      "merchant": "Swiggy",
+      "category": "Food Delivery",
+      "tag": "dup"
+    },
+    {
+      "date": "2026-08-14",
+      "narration": "UPI/SWIGGY/354267963609/okaxis",
+      "amount": 389,
+      "type": "debit",
+      "merchant": "Swiggy",
+      "category": "Food Delivery",
+      "tag": "dup"
+    },
+    {
+      "date": "2026-08-15",
+      "narration": "UPI/AIRTEL PREPAID/976266092381/airtel",
+      "amount": 399.0,
+      "type": "debit",
+      "merchant": "Airtel",
+      "category": "Bills and Utilities",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-08-16",
+      "narration": "UPI/ZOMATO/423697713595/okhdfc",
+      "amount": 528.0,
+      "type": "debit",
+      "merchant": "Zomato",
+      "category": "Food Delivery",
+      "tag": null
+    },
+    {
+      "date": "2026-08-16",
+      "narration": "UPI/BIGBASKET/026354547372/okhdfc",
+      "amount": 1027.0,
+      "type": "debit",
+      "merchant": "BigBasket",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-08-17",
+      "narration": "UBER TRIP 986758587422",
+      "amount": 446.0,
+      "type": "debit",
+      "merchant": "Uber",
+      "category": "Transport",
+      "tag": null
+    },
+    {
+      "date": "2026-08-17",
+      "narration": "ZOMATO ONLINE ORDER 254509076202",
+      "amount": 378.0,
+      "type": "debit",
+      "merchant": "Zomato",
+      "category": "Food Delivery",
+      "tag": null
+    },
+    {
+      "date": "2026-08-18",
+      "narration": "UPI/UBER INDIA/249568730378/axisbank",
+      "amount": 258.0,
+      "type": "debit",
+      "merchant": "Uber",
+      "category": "Transport",
+      "tag": null
+    },
+    {
+      "date": "2026-08-18",
+      "narration": "ATM WDL 956048123438 CHENNAI",
+      "amount": 500,
+      "type": "debit",
+      "merchant": "ATM",
+      "category": "Other",
+      "tag": null
+    },
+    {
+      "date": "2026-08-20",
+      "narration": "APPLE.COM/BILL 096748573316",
+      "amount": 75.0,
+      "type": "debit",
+      "merchant": "iCloud",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-08-22",
+      "narration": "POS AMAZON SELLER SERVICES 841748311657",
+      "amount": 18999,
+      "type": "debit",
+      "merchant": "Amazon",
+      "category": "Shopping",
+      "tag": "spike"
+    },
+    {
+      "date": "2026-08-25",
+      "narration": "BB DAILY 620223512670",
+      "amount": 1489.0,
+      "type": "debit",
+      "merchant": "BigBasket",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-08-25",
+      "narration": "UPI/DIVYA M/472880824630/okaxis",
+      "amount": 800,
+      "type": "debit",
+      "merchant": "Divya M",
+      "category": "Transfers",
+      "tag": null
+    },
+    {
+      "date": "2026-08-27",
+      "narration": "UPI/ZOMATO/470920900286/okhdfc",
+      "amount": 399.0,
+      "type": "debit",
+      "merchant": "Zomato",
+      "category": "Food Delivery",
+      "tag": null
+    },
+    {
+      "date": "2026-08-28",
+      "narration": "UPI/SWIGGY/406015391767/okaxis",
+      "amount": 389.0,
+      "type": "debit",
+      "merchant": "Swiggy",
+      "category": "Food Delivery",
+      "tag": null
+    },
+    {
+      "date": "2026-09-01",
+      "narration": "NEFT-ACME TECH SOLUTIONS-SALARY-514640228022",
+      "amount": 45000.0,
+      "type": "credit",
+      "merchant": "Salary",
+      "category": "Income",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-09-03",
+      "narration": "NETFLIX.COM MUMBAI 758112121075",
+      "amount": 649.0,
+      "type": "debit",
+      "merchant": "Netflix",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-09-05",
+      "narration": "NEFT-RENT-HOUSE OWNER-840677304281",
+      "amount": 12000.0,
+      "type": "debit",
+      "merchant": "Rent",
+      "category": "Rent",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-09-05",
+      "narration": "UPI/BIGBASKET/193180901890/okhdfc",
+      "amount": 1093.0,
+      "type": "debit",
+      "merchant": "BigBasket",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-09-06",
+      "narration": "GOOGLE*YOUTUBE PREMIUM 352547168584",
+      "amount": 129,
+      "type": "debit",
+      "merchant": "YouTube Premium",
+      "category": "Subscriptions",
+      "tag": "new_sub"
+    },
+    {
+      "date": "2026-09-07",
+      "narration": "UPI/APOLLO PHARMACY/582775299571/okaxis",
+      "amount": 174.0,
+      "type": "debit",
+      "merchant": "Apollo Pharmacy",
+      "category": "Health",
+      "tag": null
+    },
+    {
+      "date": "2026-09-08",
+      "narration": "UPI-SPOTIFY-AUTOPAY-894434254587",
+      "amount": 119.0,
+      "type": "debit",
+      "merchant": "Spotify",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-09-08",
+      "narration": "UPI/ARUN KUMAR/977112030342/okaxis",
+      "amount": 800,
+      "type": "debit",
+      "merchant": "Arun Kumar",
+      "category": "Transfers",
+      "tag": null
+    },
+    {
+      "date": "2026-09-09",
+      "narration": "UPI/SRI MURUGAN STORES/688833778006/okicici",
+      "amount": 209.0,
+      "type": "debit",
+      "merchant": "Sri Murugan Stores",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-09-10",
+      "narration": "UPI/FITNESS FIRST GYM/602685078571/okaxis",
+      "amount": 1500.0,
+      "type": "debit",
+      "merchant": "Gym",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-09-12",
+      "narration": "UPI/DISNEY HOTSTAR/542948944311/okhdfc",
+      "amount": 299.0,
+      "type": "debit",
+      "merchant": "Hotstar",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-09-12",
+      "narration": "RAPIDO BIKE 828487319198",
+      "amount": 110.0,
+      "type": "debit",
+      "merchant": "Rapido",
+      "category": "Transport",
+      "tag": null
+    },
+    {
+      "date": "2026-09-12",
+      "narration": "FLIPKART INTERNET PVT 578686926242",
+      "amount": 1574.0,
+      "type": "debit",
+      "merchant": "Flipkart",
+      "category": "Shopping",
+      "tag": null
+    },
+    {
+      "date": "2026-09-13",
+      "narration": "UPI/SRI MURUGAN STORES/892384349397/okicici",
+      "amount": 260.0,
+      "type": "debit",
+      "merchant": "Sri Murugan Stores",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-09-13",
+      "narration": "UPI/SRI MURUGAN STORES/032137236364/okicici",
+      "amount": 486.0,
+      "type": "debit",
+      "merchant": "Sri Murugan Stores",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-09-15",
+      "narration": "UPI/AIRTEL PREPAID/446470021788/airtel",
+      "amount": 399.0,
+      "type": "debit",
+      "merchant": "Airtel",
+      "category": "Bills and Utilities",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-09-18",
+      "narration": "POS AMAZON SELLER SERVICES 992964398133",
+      "amount": 563.0,
+      "type": "debit",
+      "merchant": "Amazon",
+      "category": "Shopping",
+      "tag": null
+    },
+    {
+      "date": "2026-09-18",
+      "narration": "UPI/BIGBASKET/664761009125/okhdfc",
+      "amount": 859.0,
+      "type": "debit",
+      "merchant": "BigBasket",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-09-18",
+      "narration": "UPI/VIKRAM T/848373329640/okicici",
+      "amount": 25000,
+      "type": "debit",
+      "merchant": "Vikram T",
+      "category": "Transfers",
+      "tag": "big_transfer"
+    },
+    {
+      "date": "2026-09-20",
+      "narration": "APPLE.COM/BILL 084056440212",
+      "amount": 75.0,
+      "type": "debit",
+      "merchant": "iCloud",
+      "category": "Subscriptions",
+      "tag": "recurring"
+    },
+    {
+      "date": "2026-09-20",
+      "narration": "UPI/BIGBASKET/696345702711/okhdfc",
+      "amount": 751.0,
+      "type": "debit",
+      "merchant": "BigBasket",
+      "category": "Groceries",
+      "tag": null
+    },
+    {
+      "date": "2026-09-21",
+      "narration": "UPI/PRIYA S/927444411571/okaxis",
+      "amount": 800,
+      "type": "debit",
+      "merchant": "Priya S",
+      "category": "Transfers",
+      "tag": null
+    },
+    {
+      "date": "2026-09-22",
+      "narration": "UPI/UBER INDIA/163645264684/axisbank",
+      "amount": 375.0,
+      "type": "debit",
+      "merchant": "Uber",
+      "category": "Transport",
+      "tag": null
+    },
+    {
+      "date": "2026-09-22",
+      "narration": "FLIPKART INTERNET PVT 029980269039",
+      "amount": 998.0,
+      "type": "debit",
+      "merchant": "Flipkart",
+      "category": "Shopping",
+      "tag": null
+    },
+    {
+      "date": "2026-09-23",
+      "narration": "POS AMAZON SELLER SERVICES 256706492763",
+      "amount": 879.0,
+      "type": "debit",
+      "merchant": "Amazon",
+      "category": "Shopping",
+      "tag": null
+    },
+    {
+      "date": "2026-09-25",
+      "narration": "UPI-SWIGGY-372078568443@icici",
+      "amount": 545.0,
+      "type": "debit",
+      "merchant": "Swiggy",
+      "category": "Food Delivery",
+      "tag": null
+    }
+  ],
+  "recurring": [
+    {
+      "merchant": "Netflix",
+      "amount": 649.0,
+      "frequency": "monthly"
+    },
+    {
+      "merchant": "Spotify",
+      "amount": 119.0,
+      "frequency": "monthly"
+    },
+    {
+      "merchant": "Gym",
+      "amount": 1500.0,
+      "frequency": "monthly"
+    },
+    {
+      "merchant": "Hotstar",
+      "amount": 299.0,
+      "frequency": "monthly"
+    },
+    {
+      "merchant": "Airtel",
+      "amount": 399.0,
+      "frequency": "monthly"
+    },
+    {
+      "merchant": "iCloud",
+      "amount": 75.0,
+      "frequency": "monthly"
+    },
+    {
+      "merchant": "Rent",
+      "amount": 12000.0,
+      "frequency": "monthly"
+    },
+    {
+      "merchant": "Salary",
+      "amount": 45000.0,
+      "frequency": "monthly"
+    }
+  ],
+  "anomalies": [
+    {
+      "type": "duplicate",
+      "date": "2026-08-14",
+      "merchant": "Swiggy",
+      "amount": 389
+    },
+    {
+      "type": "spike",
+      "date": "2026-08-22",
+      "merchant": "Amazon",
+      "amount": 18999
+    },
+    {
+      "type": "new_subscription",
+      "date": "2026-09-06",
+      "merchant": "YouTube Premium",
+      "amount": 129
+    },
+    {
+      "type": "big_transfer",
+      "date": "2026-09-18",
+      "merchant": "Vikram T",
+      "amount": 25000
+    }
+  ]
+}
