@@ -4,6 +4,12 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+# Print as UTF-8 so a stray symbol (e.g. the rupee sign) cannot crash the Windows console.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except AttributeError:  # stdout replaced by an object without reconfigure()
+    pass
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools.parse_statement import parse_statement  # noqa: E402

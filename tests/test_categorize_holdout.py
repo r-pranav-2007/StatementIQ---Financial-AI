@@ -8,6 +8,12 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+# Print as UTF-8 so a stray symbol (e.g. the rupee sign) cannot crash the Windows console.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except AttributeError:  # stdout replaced by an object without reconfigure()
+    pass
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import llm  # noqa: E402
@@ -86,3 +92,8 @@ for row, expected in wrong:
 confident_wrong = [r for r, _ in wrong if r["confidence"] >= 0.85]
 print(f"\nWrong but flagged unsure (< 0.85, would go to the LLM): {len(wrong) - len(confident_wrong)}")
 print(f"Wrong AND confident (>= 0.85, LLM never sees them):    {len(confident_wrong)}")
+
+if USE_LLM:
+    u = llm.usage_summary()
+    print(f"\nAPI usage: {u['calls']} calls, {u['input_tokens']} input + "
+          f"{u['output_tokens']} output tokens, about ${u['estimated_cost_usd']}")

@@ -32,6 +32,20 @@ MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 TIMEOUT_SECONDS = 30   # per request
 MAX_RETRIES = 1        # the SDK retries once on network errors, 429 and 5xx
 
+# Output-token limits per function (small on purpose: short JSON / short answers).
+CLASSIFY_MAX_TOKENS = 300          # grows by CLASSIFY_TOKENS_PER_NAME for big batches
+CLASSIFY_TOKENS_PER_NAME = 16
+SPEC_MAX_TOKENS = 300
+PHRASE_MAX_TOKENS = 400
+AGENT_MAX_TOKENS = 800
+
+# Price used by usage_summary() (US dollars per million tokens; Claude Haiku 4.5 rates).
+INPUT_COST_PER_MILLION = 1.00
+OUTPUT_COST_PER_MILLION = 5.00
+
+# Running totals for every API call made in this process.
+_usage = {"calls": 0, "input_tokens": 0, "output_tokens": 0}
+
 _cached_client = None
 
 
@@ -63,7 +77,25 @@ def _call(system: str, messages: list[dict], max_tokens: int = 1024, tools: list
     kwargs = {"model": MODEL, "max_tokens": max_tokens, "system": system, "messages": messages}
     if tools:
         kwargs["tools"] = tools
-    return _client().messages.create(**kwargs)
+    response = _client().messages.create(**kwargs)
+    _record_usage(response)
+    return response
+
+
+def _record_usage(response) -> None:
+    """Add one response's token counts to the running totals."""
+    _usage["calls"] += 1
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        _usage["input_tokens"] += usage.input_tokens or 0
+        _usage["output_tokens"] += usage.output_tokens or 0
+
+
+def usage_summary() -> dict:
+    """Totals of all API calls so far, with an estimated cost in US dollars."""
+    cost = (_usage["input_tokens"] * INPUT_COST_PER_MILLION
+            + _usage["output_tokens"] * OUTPUT_COST_PER_MILLION) / 1_000_000
+    return {**_usage, "estimated_cost_usd": round(cost, 4)}
 
 
 def _text_of(response) -> str:
@@ -124,7 +156,8 @@ def classify_batch(merchant_names: list[str], categories: list[str]) -> dict[str
     user = (f"Allowed categories: {json.dumps(categories)}\n"
             f"Merchants: {json.dumps(merchant_names)}")
     try:
-        data = _ask_json(system, user, max_tokens=64 + 32 * len(merchant_names))
+        limit = max(CLASSIFY_MAX_TOKENS, 64 + CLASSIFY_TOKENS_PER_NAME * len(merchant_names))
+        data = _ask_json(system, user, max_tokens=limit)
     except Exception as e:  # network, auth, rate limit, bad JSON, ...
         _warn("classify_batch", e)
         return result
@@ -141,28 +174,37 @@ def classify_batch(merchant_names: list[str], categories: list[str]) -> dict[str
 
 # Kinds of questions question_to_spec() can turn into a query spec.
 INTENTS = ["total_spend", "total_income", "category_breakdown", "top_merchants",
-           "monthly_trend", "list_transactions", "recurring", "anomalies", "unknown"]
+           "monthly_trend", "list_transactions", "recurring", "anomalies",
+           "compare_months", "average_transaction", "biggest_expense", "transaction_count",
+           "income_vs_expenses", "cut_suggestions", "unknown"]
 
 
 def question_to_spec(question: str, categories: list[str], merchants: list[str],
                      months: list[str]) -> dict:
     """Turn a user question into a validated query spec (no numbers are produced).
 
-    Returns {"intent", "category", "merchant", "month", "type"}; any field the
-    model got wrong becomes None, and on failure intent is "unknown".
+    Returns {"intent", "category", "merchant", "month", "month2", "type", "top_n"};
+    any field the model got wrong becomes None, and on failure intent is "unknown".
     """
-    spec = {"intent": "unknown", "category": None, "merchant": None, "month": None, "type": None}
+    spec = {"intent": "unknown", "category": None, "merchant": None, "month": None,
+            "month2": None, "type": None, "top_n": None}
     if not has_api_key():
         return spec
 
     system = (
         "You convert a personal-finance question into a query spec. Reply with JSON only, "
-        "exactly these keys: intent, category, merchant, month, type.\n"
-        f"- intent: one of {json.dumps(INTENTS)}\n"
+        "exactly these keys: intent, category, merchant, month, month2, type, top_n.\n"
+        f"- intent: one of {json.dumps(INTENTS)}. Use compare_months for one month vs another, "
+        "income_vs_expenses for savings or income vs spending, cut_suggestions for "
+        "'what can I cut / where can I save'.\n"
         "- category: one of the allowed categories, or null\n"
         "- merchant: one of the allowed merchants, or null\n"
-        "- month: one of the allowed months (YYYY-MM), or null for all months\n"
-        "- type: \"debit\", \"credit\" or null\n"
+        "- month: one of the allowed months (YYYY-MM), or null for all months. "
+        "'Last month' or 'this month' means the latest allowed month.\n"
+        "- month2: the second month for compare_months, else null\n"
+        "- type: \"debit\" or \"credit\" only if the question explicitly limits to money out "
+        "or money in, else null\n"
+        "- top_n: how many items for top_merchants (integer), else null\n"
         "Never answer the question and never include numbers you were not given."
     )
     user = (f"Allowed categories: {json.dumps(categories)}\n"
@@ -170,7 +212,7 @@ def question_to_spec(question: str, categories: list[str], merchants: list[str],
             f"Allowed months: {json.dumps(months)}\n"
             f"Question: {question}")
     try:
-        data = _ask_json(system, user, max_tokens=256)
+        data = _ask_json(system, user, max_tokens=SPEC_MAX_TOKENS)
     except Exception as e:
         _warn("question_to_spec", e)
         return spec
@@ -179,7 +221,11 @@ def question_to_spec(question: str, categories: list[str], merchants: list[str],
     spec["category"] = _pick(data.get("category"), categories)
     spec["merchant"] = _pick(data.get("merchant"), merchants)
     spec["month"] = _pick(data.get("month"), months)
+    spec["month2"] = _pick(data.get("month2"), months)
     spec["type"] = _pick(data.get("type"), ["debit", "credit"])
+    top_n = data.get("top_n")
+    valid_n = isinstance(top_n, int) and not isinstance(top_n, bool) and 1 <= top_n <= 20
+    spec["top_n"] = top_n if valid_n else None
     return spec
 
 
@@ -197,12 +243,15 @@ def phrase_answer(question: str, numbers: dict) -> str:
         "Use ONLY the numbers provided in the data, copied exactly. "
         "Never add, estimate, round differently, or calculate any figure, "
         "and never mention a number that is not in the data. "
-        "Amounts are in Indian Rupees; write them with the ₹ sign."
+        "Amounts are in Indian Rupees: write them as \"Rs\" followed by the number with "
+        "Indian comma grouping, for example Rs 1,25,000 or Rs 389. "
+        "Never use the rupee symbol."
     )
     user = f"Question: {question}\nData (JSON): {json.dumps(numbers, ensure_ascii=False)}"
     for attempt in range(2):  # first try + one retry
         try:
-            text = _text_of(_call(system, [{"role": "user", "content": user}], max_tokens=300)).strip()
+            reply = _call(system, [{"role": "user", "content": user}], max_tokens=PHRASE_MAX_TOKENS)
+            text = _text_of(reply).strip()
             if text:
                 return text
         except Exception as e:
@@ -227,7 +276,7 @@ def run_agent_turn(messages: list[dict], tool_declarations: list[dict],
         return {"type": "error", "text": "No ANTHROPIC_API_KEY set - agent is unavailable in no-LLM mode."}
     for attempt in range(2):  # first try + one retry
         try:
-            response = _call(system, messages, max_tokens=2048, tools=tool_declarations)
+            response = _call(system, messages, max_tokens=AGENT_MAX_TOKENS, tools=tool_declarations)
             content = [block.model_dump() for block in response.content]
             if response.stop_reason == "tool_use":
                 calls = [{"id": b.id, "name": b.name, "input": b.input}
