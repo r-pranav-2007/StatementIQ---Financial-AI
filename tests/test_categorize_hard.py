@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+import llm  # noqa: E402
 from tools.categorize import categorize_transactions  # noqa: E402
 
 # (description, type, amount, expected category)
@@ -44,7 +45,12 @@ CASES = [
 
 txns = [{"date": "2026-10-01", "description": d, "type": ty, "amount": float(a), "balance": None}
         for d, ty, a, _ in CASES]
-rows = categorize_transactions(txns, use_llm=False)
+# Run with --llm to let the LLM check unsure rows (needs ANTHROPIC_API_KEY).
+USE_LLM = "--llm" in sys.argv
+MODE = "rules + LLM" if USE_LLM else "no-LLM mode"
+if USE_LLM and not llm.has_api_key():
+    print("WARNING: --llm given but ANTHROPIC_API_KEY is not set; results are rules only.")
+rows = categorize_transactions(txns, use_llm=USE_LLM)
 
 correct = 0
 total_by_cat, correct_by_cat = Counter(), Counter()
@@ -59,7 +65,7 @@ for row, (_, _, _, expected) in zip(rows, CASES):
 
 acc = 100 * correct / len(CASES)
 print("=" * 78)
-print(f"HARD TEST (no-LLM mode):  {correct}/{len(CASES)} correct  ->  {acc:.1f}%")
+print(f"HARD TEST ({MODE}):  {correct}/{len(CASES)} correct  ->  {acc:.1f}%")
 print("=" * 78)
 print(f"{'Category':<22}{'Correct':>10}{'Accuracy':>10}")
 for cat in sorted(total_by_cat):
