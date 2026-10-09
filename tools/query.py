@@ -612,12 +612,33 @@ def answer_query(question: str, transactions: list[dict], use_llm: bool = True) 
 # analyze_spending: compact facts for an open-ended analysis
 # ---------------------------------------------------------------------------
 
+ONE_OFF_TYPES = {"spike", "big_transfer"}  # alert types that count as large one-offs
 SAVINGS_CATEGORIES = ["Food Delivery", "Shopping", "Entertainment", "Subscriptions"]  # cut-able
 SAVING_CATEGORIES = {"Investments"}  # money put away: counted as saving, never a cut target
 FIXED_CATEGORIES = ["Rent", "Bills and Utilities", "Subscriptions", "Investments"]  # fixed costs (incl. SIP)
 CUT_LEVELS = (10, 20)                # percent cuts pre-computed for each cut-able category
 TOP_MERCHANTS_SHOWN = 8
 FACT_LIST_LIMIT = 10                 # max recurring items / alerts in the facts
+
+
+def month_comparisons(months: list[str], totals: list[float]) -> list[str]:
+    """Ready-made sentences like "May vs April: up Rs 14,027 (+39.4%)", so nobody has to interpret
+    a percentage: each sentence names both months. Consecutive pairs plus last vs first."""
+    pairs = [(i, i + 1) for i in range(len(months) - 1)]
+    if len(months) > 2:
+        pairs.append((0, len(months) - 1))
+    multi_year = months[0][:4] != months[-1][:4]
+
+    def name(m: str) -> str:
+        return _month_label(m) if multi_year else _month_label(m).split()[0]
+
+    out = []
+    for a, b in pairs:
+        diff = round(totals[b] - totals[a], 2)
+        word = "up" if diff >= 0 else "down"
+        pct = f" ({diff / totals[a] * 100:+.1f}%)" if totals[a] else ""
+        out.append(f"{name(months[b])} vs {name(months[a])}: {word} {inr(abs(diff))}{pct}")
+    return out
 
 
 def analysis_facts(txns: list[dict]) -> dict:
@@ -638,17 +659,25 @@ def analysis_facts(txns: list[dict]) -> dict:
 
     fixed_total = _total([t for t in debits if t["category"] in FIXED_CATEGORIES])
     variable_total = round(spent - fixed_total, 2)
-    monthly, previous = [], None
+    recurring = detect_recurring(txns)
+    flags = find_anomalies(txns, recurring)
+    # Large one-off transactions: spikes and big transfers to new people (from the alerts).
+    one_offs = [f["transaction"] for f in flags if f["type"] in ONE_OFF_TYPES]
+
+    monthly = []
     for m in months:
         rows = _filter(debits, m)
         total = _total(rows)
         fixed = _total([t for t in rows if t["category"] in FIXED_CATEGORIES])
         row = {"month": _month_label(m), "total": total, "fixed_costs": fixed,
                "variable_spending": round(total - fixed, 2)}
-        if previous:  # month-over-month change, signed
-            row["change_percent"] = round((total - previous) / previous * 100, 1)
+        items = [t for t in one_offs if t["date"][:7] == m]
+        if items:
+            off = _total(items)
+            row["one_offs_total"] = off
+            row["total_without_one_offs"] = round(total - off, 2)
+            row["one_offs"] = [f"{t['merchant']} {inr(t['amount'])} on {_date_label(t['date'])}" for t in items]
         monthly.append(row)
-        previous = total
 
     merchant_totals, merchant_counts = {}, {}
     for t in debits:
@@ -657,17 +686,17 @@ def analysis_facts(txns: list[dict]) -> dict:
             merchant_counts[t["merchant"]] = merchant_counts.get(t["merchant"], 0) + 1
     top = sorted(merchant_totals.items(), key=lambda kv: -kv[1])[:TOP_MERCHANTS_SHOWN]
 
-    recurring = detect_recurring(txns)
     subs = summarize_subscriptions(recurring)
-    flags = find_anomalies(txns, recurring)
     net = round(income - spent, 2)
 
     potential = []
     for c in SAVINGS_CATEGORIES:
         if by_cat.get(c):
-            potential.append({"category": c, "total": round(by_cat[c], 2),
-                              # whole rupees, so the model has no decimals to mangle
-                              **{f"cut_{p}_percent_saves": round(by_cat[c] * p / 100) for p in CUT_LEVELS}})
+            potential.append({"category": c, "total_over_whole_period": round(by_cat[c], 2),
+                              "average_per_month": round(by_cat[c] / n_months),
+                              # per MONTH, whole rupees, so the model has no decimals to mangle
+                              **{f"saving_if_cut_{p}pct_per_month": round(by_cat[c] / n_months * p / 100)
+                                 for p in CUT_LEVELS}})
 
     facts = {
         "period": f"{_month_label(months[0])} to {_month_label(months[-1])}" if months else "",
@@ -679,7 +708,15 @@ def analysis_facts(txns: list[dict]) -> dict:
         "average_monthly_fixed_costs": round(fixed_total / n_months, 2),
         "average_monthly_variable_spending": round(variable_total / n_months, 2),
         "categories": categories,
+        "category_ranking": [f"{i}. {c['category']}: {inr(c['total'])} ({c['share_percent']}%)"
+                             + (" - saving" if c["kind"] == "saving" else "")
+                             for i, c in enumerate(categories, 1)],  # already in descending order
+        "largest_category": ({"category": categories[0]["category"], "total": categories[0]["total"],
+                              "share_percent": categories[0]["share_percent"]} if categories else None),
         "monthly": monthly,
+        "month_comparisons": month_comparisons(months, [r["total"] for r in monthly]),
+        "one_off_transactions": [{"date": _date_label(t["date"]), "merchant": t["merchant"],
+                                  "amount": t["amount"]} for t in one_offs],
         "top_merchants": [{"merchant": m, "total": round(v, 2), "transactions": merchant_counts[m]}
                           for m, v in top],
         "recurring": [{"merchant": r["merchant"], "amount": r["amount"], "frequency": r["frequency"],
@@ -707,26 +744,30 @@ def rich_analysis(facts: dict) -> str:
     """A Python-only analysis built from the facts (shown when the model's reply is not trusted)."""
     cats = ", ".join(f"{c['category']} {inr(c['total'])} ({c['share_percent']}%)"
                      for c in facts["categories"][:3])
-    trend = ", ".join(f"{m['month']} {inr(m['total'])}"
-                      + (f" ({m['change_percent']:+}%)" if "change_percent" in m else "")
-                      for m in facts["monthly"])
+    trend = ", ".join(f"{m['month']} {inr(m['total'])}" for m in facts["monthly"])
+    comparisons = "; ".join(facts["month_comparisons"])
     lines = [f"You spent {inr(facts['total_spent'])} over {facts['period']}, about "
              f"{inr(facts['average_monthly_spending'])} a month. Biggest categories: {cats}.",
-             f"By month: {trend}.",
-             f"Fixed costs (rent, bills, subscriptions, investments) average "
-             f"{inr(facts['average_monthly_fixed_costs'])} a month and variable spending "
-             f"{inr(facts['average_monthly_variable_spending'])} a month. Recurring payments cost "
+             f"By month: {trend}." + (f" {comparisons}." if comparisons else ""),
+             f"Fixed costs average {inr(facts['average_monthly_fixed_costs'])} a month and variable "
+             f"spending {inr(facts['average_monthly_variable_spending'])}; recurring payments cost "
              f"{inr(facts['recurring_monthly_cost'])} a month."]
-    if facts["alerts"]:
-        lines.append("Worth a look: " + "; ".join(
-            f"{a['merchant']} {inr(a['amount'])} on {a['date']}" for a in facts["alerts"][:3]) + ".")
+    other_alerts = [a for a in facts["alerts"] if a["type"] not in ONE_OFF_TYPES][:2]  # one-offs are listed below
+    if other_alerts:
+        lines.append("Also check: " + "; ".join(
+            f"{a['merchant']} {inr(a['amount'])} on {a['date']}" for a in other_alerts) + ".")
+    for m in facts["monthly"]:
+        if "one_offs" in m:
+            lines.append(f"{m['month']} includes one-offs ({'; '.join(m['one_offs'])}); without them it "
+                         f"would be {inr(m['total_without_one_offs'])}.")
     ideas = []
     if facts["subscriptions"]["count"]:
         ideas.append(f"Review your subscriptions: they cost {inr(facts['subscriptions']['monthly_total'])} a month.")
-    for p in sorted(facts["savings_potential"], key=lambda p: -p["total"]):
+    for p in sorted(facts["savings_potential"], key=lambda p: -p["total_over_whole_period"]):
         if p["category"] != "Subscriptions" and len(ideas) < 3:
-            ideas.append(f"Trim {p['category']} ({inr(p['total'])}): cutting 10% saves "
-                         f"{inr(p['cut_10_percent_saves'])}, 20% saves {inr(p['cut_20_percent_saves'])}.")
+            ideas.append(f"Trim {p['category']} (about {inr(p['average_per_month'])} a month): cutting 10% "
+                         f"saves {inr(p['saving_if_cut_10pct_per_month'])} a month, 20% saves "
+                         f"{inr(p['saving_if_cut_20pct_per_month'])} a month.")
     if ideas:
         lines.append("Ideas to save:\n" + "\n".join(f"- {i}" for i in ideas))
     if "invested" in facts:
@@ -752,7 +793,8 @@ FACT_AMOUNT_KEYS = {"total", "amount", "monthly_cost", "income", "spending", "di
                     "total_spent", "monthly_total", "fixed_costs", "variable_spending",
                     "average_monthly_spending", "fixed_costs_total", "variable_spending_total",
                     "average_monthly_fixed_costs", "average_monthly_variable_spending",
-                    "recurring_monthly_cost"}
+                    "recurring_monthly_cost", "total_over_whole_period", "average_per_month",
+                    "one_offs_total", "total_without_one_offs"}
 
 
 def format_facts(value, key: str | None = None):
@@ -766,10 +808,8 @@ def format_facts(value, key: str | None = None):
         return [format_facts(v, key) for v in value]
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return value
-    if key in FACT_AMOUNT_KEYS or (key or "").endswith("_saves"):
+    if key in FACT_AMOUNT_KEYS or (key or "").startswith("saving_if_cut"):
         return inr(value)
     if key == "share_percent":
         return f"{value}%"
-    if key == "change_percent":
-        return f"{value:+}%"
     return value

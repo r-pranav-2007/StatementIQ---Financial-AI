@@ -22,6 +22,7 @@ from tools.parse_statement import parse_statement
 from tools.query import analyze_spending, answer_query, format_facts, unsupported_numbers
 from tools.recurring import detect_recurring, summarize_subscriptions
 
+MAX_WORDS = 150  # a longer reply is treated like a guard rejection (retry, then fallback)
 MAX_STEPS = 6   # model calls per user message
 MAX_ROWS = 10   # max list items in any tool result sent to the model
 HISTORY_TURNS = 4  # previous chat turns sent to the model so follow-up questions work
@@ -48,12 +49,29 @@ Rules:
 - Use only numbers and dates from the current tool results. Never use numbers from earlier turns,
   and never mention an amount or date that is not in the facts.
 - After analyze_spending you get a facts object. Write a helpful, specific analysis in plain words,
-  under about 150 words, with 3 to 5 concrete suggestions as short lines starting with "-". Quote
+  under 120 words, with 3 to 5 concrete suggestions as short lines starting with "-". Quote
   numbers exactly as the facts give them, digit for digit with decimals and the % sign (write 39.4%,
   never 39%), and never calculate a new one: do not add numbers together (not even shares), no
   differences, averages, ranges or percentages of your own, and no counts like "three ideas".
-  If you want to mention a total, use one the facts already give. Investments are saving, never something to cut. If the
+  If you want to mention a total, use one the facts already give.
+  When talking about which category is biggest or in what order, quote category_ranking exactly
+  (and largest_category for the biggest) and never reorder categories or compare percentages
+  yourself.
+  For comparisons between months, quote the sentences in month_comparisons exactly as written, and
+  never say a percentage compares different months than its sentence states. Savings are per
+  month (saving_if_cut_..._per_month); never call a whole-period amount monthly. To explain a
+  high month, quote only the one_offs of that month in the facts (and total_without_one_offs). Investments are saving, never something to cut. If the
   facts cannot support a suggestion, leave it out.
+- Tone for an analysis: supportive and practical, under 120 words. Never use the words "overspent",
+  "overspending" or "wasteful" (even though income_vs_spending.result may say "overspent"). If
+  spending is higher than income over the period, say it neutrally, e.g. "Spending was Rs X higher
+  than income over this period", and in the same sentence say whether the one_off_transactions
+  explain it, quoting their amounts from the facts only. If there are no one_off_transactions, just
+  state the gap neutrally.
+- When quoting a month comparison, quote the full sentence from month_comparisons (e.g. "May vs
+  April: up Rs X (+Y%)") so it is clear which months are compared; never a bare percentage.
+- Give savings as a single per-month figure per category (the 10% figure or the 20% figure), never
+  a range.
 - Call a tool for every new question, even if an earlier answer seems to cover it."""
 
 TOOLS = [
@@ -385,7 +403,7 @@ class StatementAgent:
             if step["type"] == "text":
                 verdict = self._judge(step["text"].strip(), results, message)
                 if verdict["status"] == "reject" and first_bad is None:
-                    first_bad = verdict["bad"]  # retry ONCE, telling the model what was wrong
+                    first_bad = self._reason(verdict)  # retry ONCE, telling the model what was wrong
                     convo.append({"role": "user", "content": self._retry_message(verdict)})
                     continue
                 return self._finish(text, self._result(verdict, results, message, first_bad))
@@ -418,23 +436,42 @@ class StatementAgent:
             if unsupported_numbers(answer, {"user": message, "statement": self._statement_facts()}):
                 return {"status": "refuse", "answer": answer}
             return {"status": "ok", "answer": answer}
-        allowed = {"tools": [_model_view(r) for _, r in results], "user": message,
-                   "statement": self._statement_facts()}
+        # With tool results, only those (and the user's own words) count. The statement's date range
+        # and totals are NOT allowed here: their digits would let an invented date like "30 June" pass.
+        allowed = {"tools": [_model_view(r) for _, r in results], "user": message}
         checked = re.sub(r"(?m)^\s*\d+[.)]\s", "", answer)  # list numbering "1. " is not a figure
         bad = unsupported_numbers(checked, allowed)
-        if not answer or bad:
-            return {"status": "reject", "answer": answer, "bad": bad}
+        words = len(answer.split())
+        if not answer or bad or words > MAX_WORDS:
+            return {"status": "reject", "answer": answer, "bad": bad,
+                    "words": words if words > MAX_WORDS else 0}
         return {"status": "ok", "answer": answer}
+
+    @staticmethod
+    def _reason(verdict: dict) -> str:
+        """Why a reply was rejected, in a few words (for the UI and the log)."""
+        parts = []
+        if not verdict["answer"]:
+            parts.append("empty reply")
+        if verdict.get("bad"):
+            parts.append(f"numbers not in the tool results {verdict['bad']}")
+        if verdict.get("words"):
+            parts.append(f"too long ({verdict['words']} words)")
+        return " and ".join(parts)
 
     @staticmethod
     def _retry_message(verdict: dict) -> str:
         if not verdict["answer"]:
             return "Your reply was empty. Answer again using only numbers and dates from the tool results."
-        shown = ", ".join(f"{n:,.2f}".rstrip("0").rstrip(".") for n in verdict["bad"])
-        return (f"Your reply was rejected: these numbers or dates are not in the tool results: {shown}. "
-                "Rewrite the answer using only numbers and dates that appear in the tool results, "
-                "copied exactly. Do not add, subtract or round anything, and do not use numbers "
-                "from earlier turns.")
+        parts = []
+        if verdict["bad"]:
+            shown = ", ".join(f"{n:,.2f}".rstrip("0").rstrip(".") for n in verdict["bad"])
+            parts.append(f"these numbers or dates are not in the tool results: {shown}. Rewrite the answer "
+                         "using only numbers and dates that appear in the tool results, copied exactly. "
+                         "Do not add, subtract or round anything, and do not use numbers from earlier turns.")
+        if verdict.get("words"):
+            parts.append(f"it is {verdict['words']} words long. Rewrite it in under 120 words.")
+        return "Your reply was rejected: " + " Also, ".join(parts)
 
     def _fallback(self, results: list, message: str) -> str:
         """Python-only answer when the model could not be trusted."""
@@ -447,8 +484,7 @@ class StatementAgent:
     def _result(self, verdict: dict, results: list, message: str, first_bad) -> dict:
         retried = first_bad is not None
         if verdict["status"] == "ok":
-            guard = f"first reply rejected (numbers not in the tool results: {first_bad}); rewrite accepted" \
-                if retried else ""
+            guard = f"first reply rejected ({first_bad}); rewrite accepted" if retried else ""
             return {"answer": verdict["answer"], "mode": "llm", "guard": guard, "retried": retried}
         if verdict["status"] == "no_tool":
             name, args = self._route(message)
@@ -461,7 +497,7 @@ class StatementAgent:
             return {"answer": "Sorry, I need to look at your statement for that. Please ask again.",
                     "mode": "llm", "guard": "replaced unsupported numbers", "retried": False}
         # rejected a second time: Python-only answer
+        why = self._reason(verdict)
         return {"answer": self._fallback(results, message), "mode": "llm", "retried": retried,
-                "guard": f"rejected twice, numbers not in the tool results: {first_bad} then {verdict['bad']}"
-                         if retried else f"replaced unsupported numbers {verdict['bad']}",
+                "guard": f"rejected twice (first: {first_bad}; second: {why})" if retried else f"replaced: {why}",
                 "rejected_answer": verdict["answer"]}

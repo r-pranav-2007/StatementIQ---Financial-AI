@@ -71,6 +71,10 @@ real = results[0][1]["answer"]
 verdict = agent._judge("You spent Rs 99,999 in August.", results, "How much did I spend in August?")
 check("rejects an invented amount", verdict["status"] == "reject" and 99999.0 in verdict["bad"])
 check("accepts the tool's own answer", agent._judge(real, results, "How much did I spend in August?")["status"] == "ok")
+end_day = int(agent._statement_facts()["to"][8:])  # day of the statement's last date, e.g. 30
+check("a date borrowed from the statement range is rejected",
+      agent._judge(real + f" That was on {end_day} June.", results, "q")["status"] == "reject"
+      or str(end_day) in real)
 check("rejects an invented date", agent._judge(real + " That was on 19 June.", results, "q")["status"] == "reject")
 
 # 2. Retry: bad first reply, good second reply -> retry used, second reply shown.
@@ -101,6 +105,17 @@ check("good reply: no retry, no intervention", not result["retried"] and result[
 # 6. Model skips the tools on a finance question -> its text is not shown.
 result, _ = run(agent, question, [("text", "Please upload a statement first.")])
 check("skipped tools -> answered by a tool", "no tool called" in result["guard"] and "upload" not in result["answer"].lower(), str(result))
+
+# 7. Length: a reply over 150 words counts as a rejection (retry, then fallback).
+long_reply = real + " " + " ".join(["words"] * 160)
+verdict = agent._judge(long_reply, results, question)
+check("over 150 words is rejected", verdict["status"] == "reject" and verdict["words"] > 150, str(verdict)[:120])
+result, fake = run(agent, question, [("tool", "answer_query"), ("text", long_reply), ("text", real)])
+check("too long -> retry asks for under 120 words, rewrite accepted",
+      result["retried"] and result["answer"] == real and "under 120 words" in fake.seen[-1][-1]["content"]
+      and "too long" in result["guard"], str(result))
+result, _ = run(agent, question, [("tool", "answer_query"), ("text", long_reply), ("text", long_reply)])
+check("too long twice -> fallback", result["answer"] == real and "rejected twice" in result["guard"], str(result))
 
 check("no network calls were made", not NETWORK_CALLS)
 print("\nPASS" if all(checks) else "\nFAIL")
