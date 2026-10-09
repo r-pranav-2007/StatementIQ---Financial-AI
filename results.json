@@ -1,0 +1,196 @@
+{
+  "date": "2026-10-09",
+  "llm_run": true,
+  "results": [
+    {
+      "section": "Parsing",
+      "test": "1_bank_separate_columns.csv",
+      "offline": {
+        "passed": 77,
+        "total": 77,
+        "note": ""
+      },
+      "llm": null
+    },
+    {
+      "section": "Parsing",
+      "test": "2_bank_with_header_junk.csv",
+      "offline": {
+        "passed": 77,
+        "total": 77,
+        "note": ""
+      },
+      "llm": null
+    },
+    {
+      "section": "Parsing",
+      "test": "3_bank_single_amount_drcr.csv",
+      "offline": {
+        "passed": 77,
+        "total": 77,
+        "note": ""
+      },
+      "llm": null
+    },
+    {
+      "section": "Parsing",
+      "test": "4_wallet_upi_app.csv",
+      "offline": {
+        "passed": 77,
+        "total": 77,
+        "note": ""
+      },
+      "llm": null
+    },
+    {
+      "section": "Parsing",
+      "test": "5_bank_statement.xlsx",
+      "offline": {
+        "passed": 77,
+        "total": 77,
+        "note": ""
+      },
+      "llm": null
+    },
+    {
+      "section": "Parsing",
+      "test": "6_bank_statement.pdf",
+      "offline": {
+        "passed": 77,
+        "total": 77,
+        "note": ""
+      },
+      "llm": null
+    },
+    {
+      "section": "Categorization",
+      "test": "Bank CSV",
+      "offline": {
+        "passed": 77,
+        "total": 77,
+        "note": ""
+      },
+      "llm": {
+        "passed": 77,
+        "total": 77,
+        "note": ""
+      }
+    },
+    {
+      "section": "Categorization",
+      "test": "Wallet CSV",
+      "offline": {
+        "passed": 77,
+        "total": 77,
+        "note": ""
+      },
+      "llm": {
+        "passed": 77,
+        "total": 77,
+        "note": ""
+      }
+    },
+    {
+      "section": "Categorization",
+      "test": "Hard test (25 unseen)",
+      "offline": {
+        "passed": 18,
+        "total": 25,
+        "note": ""
+      },
+      "llm": {
+        "passed": 25,
+        "total": 25,
+        "note": ""
+      }
+    },
+    {
+      "section": "Categorization",
+      "test": "Holdout (25 unseen)",
+      "offline": {
+        "passed": 9,
+        "total": 25,
+        "note": ""
+      },
+      "llm": {
+        "passed": 23,
+        "total": 25,
+        "note": ""
+      }
+    },
+    {
+      "section": "Recurring detection",
+      "test": "Bank CSV: found vs planted",
+      "offline": {
+        "passed": 8,
+        "total": 8,
+        "note": "0 false positives"
+      },
+      "llm": null
+    },
+    {
+      "section": "Recurring detection",
+      "test": "Wallet CSV: found vs planted",
+      "offline": {
+        "passed": 8,
+        "total": 8,
+        "note": "0 false positives"
+      },
+      "llm": null
+    },
+    {
+      "section": "Anomaly detection",
+      "test": "Bank CSV: caught vs planted",
+      "offline": {
+        "passed": 4,
+        "total": 4,
+        "note": "0 false alarms"
+      },
+      "llm": null
+    },
+    {
+      "section": "Anomaly detection",
+      "test": "Wallet CSV: caught vs planted",
+      "offline": {
+        "passed": 4,
+        "total": 4,
+        "note": "0 false alarms"
+      },
+      "llm": null
+    },
+    {
+      "section": "Query",
+      "test": "Correct answers + hallucinated numbers",
+      "offline": {
+        "passed": 20,
+        "total": 20,
+        "note": "0 hallucinated"
+      },
+      "llm": {
+        "passed": 20,
+        "total": 20,
+        "note": "0 hallucinated"
+      }
+    },
+    {
+      "section": "Agent",
+      "test": "Tool selection",
+      "offline": {
+        "passed": 6,
+        "total": 6,
+        "note": ""
+      },
+      "llm": {
+        "passed": 6,
+        "total": 6,
+        "note": ""
+      }
+    }
+  ],
+  "api_usage": {
+    "calls": 64,
+    "input_tokens": 50913,
+    "output_tokens": 4214,
+    "estimated_cost_usd": 0.072
+  }
+}
