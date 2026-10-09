@@ -248,6 +248,8 @@ def _render_tool_log(entry: dict) -> None:
         guard = entry.get("guard") or ""
         st.write(f"Number guard intervened: **yes** ({guard})" if guard
                  else "Number guard intervened: **no**")
+        if entry.get("retried"):
+            st.write("Retry used: **yes** (the model was asked to rewrite its reply once)")
         st.caption(f"Mode: {entry['mode']}")
 
 
@@ -270,7 +272,8 @@ def _chat() -> None:
             result = st.session_state.agent.chat(prompt)
         st.markdown(result["answer"])
         entry = {"role": "assistant", "content": result["answer"], "mode": result["mode"],
-                 "tool_log": result["tool_log"], "guard": result.get("guard", "")}
+                 "tool_log": result["tool_log"], "guard": result.get("guard", ""),
+                 "retried": result.get("retried", False)}
         _render_tool_log(entry)
     st.session_state.chat.append(entry)
 

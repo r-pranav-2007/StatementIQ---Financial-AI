@@ -614,6 +614,7 @@ def answer_query(question: str, transactions: list[dict], use_llm: bool = True) 
 
 SAVINGS_CATEGORIES = ["Food Delivery", "Shopping", "Entertainment", "Subscriptions"]  # cut-able
 SAVING_CATEGORIES = {"Investments"}  # money put away: counted as saving, never a cut target
+FIXED_CATEGORIES = ["Rent", "Bills and Utilities", "Subscriptions", "Investments"]  # fixed costs (incl. SIP)
 CUT_LEVELS = (10, 20)                # percent cuts pre-computed for each cut-able category
 TOP_MERCHANTS_SHOWN = 8
 FACT_LIST_LIMIT = 10                 # max recurring items / alerts in the facts
@@ -625,6 +626,7 @@ def analysis_facts(txns: list[dict]) -> dict:
     credits = [t for t in txns if t["type"] == "credit"]
     spent, income = _total(debits), _total(credits)
     months = sorted({t["date"][:7] for t in txns})
+    n_months = len(months) or 1
 
     by_cat = {}
     for t in debits:
@@ -634,10 +636,15 @@ def analysis_facts(txns: list[dict]) -> dict:
                    "share_percent": round(v / spent * 100, 1) if spent else 0,
                    "kind": "saving" if c in SAVING_CATEGORIES else "spending"} for c, v in ranked]
 
+    fixed_total = _total([t for t in debits if t["category"] in FIXED_CATEGORIES])
+    variable_total = round(spent - fixed_total, 2)
     monthly, previous = [], None
     for m in months:
-        total = _total(_filter(debits, m))
-        row = {"month": _month_label(m), "total": total}
+        rows = _filter(debits, m)
+        total = _total(rows)
+        fixed = _total([t for t in rows if t["category"] in FIXED_CATEGORIES])
+        row = {"month": _month_label(m), "total": total, "fixed_costs": fixed,
+               "variable_spending": round(total - fixed, 2)}
         if previous:  # month-over-month change, signed
             row["change_percent"] = round((total - previous) / previous * 100, 1)
         monthly.append(row)
@@ -659,11 +666,18 @@ def analysis_facts(txns: list[dict]) -> dict:
     for c in SAVINGS_CATEGORIES:
         if by_cat.get(c):
             potential.append({"category": c, "total": round(by_cat[c], 2),
-                              **{f"cut_{p}_percent_saves": round(by_cat[c] * p / 100) for p in CUT_LEVELS}})  # whole rupees
+                              # whole rupees, so the model has no decimals to mangle
+                              **{f"cut_{p}_percent_saves": round(by_cat[c] * p / 100) for p in CUT_LEVELS}})
 
     facts = {
         "period": f"{_month_label(months[0])} to {_month_label(months[-1])}" if months else "",
         "total_spent": spent,
+        "average_monthly_spending": round(spent / n_months, 2),
+        "fixed_cost_categories": FIXED_CATEGORIES,
+        "fixed_costs_total": fixed_total,
+        "variable_spending_total": variable_total,
+        "average_monthly_fixed_costs": round(fixed_total / n_months, 2),
+        "average_monthly_variable_spending": round(variable_total / n_months, 2),
         "categories": categories,
         "monthly": monthly,
         "top_merchants": [{"merchant": m, "total": round(v, 2), "transactions": merchant_counts[m]}
@@ -671,9 +685,13 @@ def analysis_facts(txns: list[dict]) -> dict:
         "recurring": [{"merchant": r["merchant"], "amount": r["amount"], "frequency": r["frequency"],
                        "kind": r["kind"], "monthly_cost": r["monthly_cost"]}
                       for r in recurring[:FACT_LIST_LIMIT]],
+        "recurring_monthly_cost": round(sum(r["monthly_cost"] for r in recurring if r["kind"] != "income"), 2),
         "subscriptions": subs,
         "alert_count": len(flags),
-        "alerts": [f["reason"] for f in flags[:FACT_LIST_LIMIT]],
+        "alerts": [{"type": f["type"], "severity": f["severity"],
+                    "date": _date_label(f["transaction"]["date"]), "merchant": f["transaction"]["merchant"],
+                    "amount": f["transaction"]["amount"], "reason": f["reason"]}
+                   for f in flags[:FACT_LIST_LIMIT]],
         "income_vs_spending": {"income": income, "spending": spent, "difference": abs(net),
                                "result": "saved" if net >= 0 else "overspent"},
         "cut_levels_percent": list(CUT_LEVELS),
@@ -685,41 +703,56 @@ def analysis_facts(txns: list[dict]) -> dict:
     return facts
 
 
-def _plain_analysis(facts: dict) -> str:
-    """A plain-Python overview built only from the facts (used when no LLM answer is trusted)."""
+def rich_analysis(facts: dict) -> str:
+    """A Python-only analysis built from the facts (shown when the model's reply is not trusted)."""
     cats = ", ".join(f"{c['category']} {inr(c['total'])} ({c['share_percent']}%)"
                      for c in facts["categories"][:3])
-    months = ", ".join(f"{m['month']} {inr(m['total'])}" for m in facts["monthly"])
-    text = (f"You spent {inr(facts['total_spent'])} over {facts['period']}. "
-            f"Biggest categories: {cats}. By month: {months}.")
-    if facts["savings_potential"]:
-        text += " Easiest areas to cut back: " + ", ".join(
-            f"{p['category']} ({inr(p['total'])})" for p in facts["savings_potential"]) + "."
+    trend = ", ".join(f"{m['month']} {inr(m['total'])}"
+                      + (f" ({m['change_percent']:+}%)" if "change_percent" in m else "")
+                      for m in facts["monthly"])
+    lines = [f"You spent {inr(facts['total_spent'])} over {facts['period']}, about "
+             f"{inr(facts['average_monthly_spending'])} a month. Biggest categories: {cats}.",
+             f"By month: {trend}.",
+             f"Fixed costs (rent, bills, subscriptions, investments) average "
+             f"{inr(facts['average_monthly_fixed_costs'])} a month and variable spending "
+             f"{inr(facts['average_monthly_variable_spending'])} a month. Recurring payments cost "
+             f"{inr(facts['recurring_monthly_cost'])} a month."]
+    if facts["alerts"]:
+        lines.append("Worth a look: " + "; ".join(
+            f"{a['merchant']} {inr(a['amount'])} on {a['date']}" for a in facts["alerts"][:3]) + ".")
+    ideas = []
+    if facts["subscriptions"]["count"]:
+        ideas.append(f"Review your subscriptions: they cost {inr(facts['subscriptions']['monthly_total'])} a month.")
+    for p in sorted(facts["savings_potential"], key=lambda p: -p["total"]):
+        if p["category"] != "Subscriptions" and len(ideas) < 3:
+            ideas.append(f"Trim {p['category']} ({inr(p['total'])}): cutting 10% saves "
+                         f"{inr(p['cut_10_percent_saves'])}, 20% saves {inr(p['cut_20_percent_saves'])}.")
+    if ideas:
+        lines.append("Ideas to save:\n" + "\n".join(f"- {i}" for i in ideas))
     if "invested" in facts:
-        text += f" Investments ({inr(facts['invested']['total'])}) count as saving, not spending to cut."
-    return text
+        lines.append(f"Investments ({inr(facts['invested']['total'])}) count as saving, not spending to cut.")
+    return "\n".join(lines)
 
 
 def analyze_spending(question: str, transactions: list[dict], use_llm: bool = True) -> dict:
-    """Facts for an open-ended question plus a plain Python answer.
+    """Facts for an open-ended question plus a Python-only analysis.
 
-    Returns {"answer", "numbers", "supporting_transactions"}. "numbers" is the facts dict; "answer"
-    is the plain answer from answer_query (or a short Python overview when that cannot answer).
-    In LLM mode the agent's model writes the analysis from "numbers" and the number guard checks
-    it against them; "answer" is what is shown if the guard rejects it.
+    Returns {"answer", "numbers", "supporting_transactions"}. "numbers" is the facts dict. In LLM
+    mode the agent's model writes the analysis from "numbers" and the number guard checks it
+    against them; "answer" (the Python analysis) is shown if the guard rejects the model twice.
     """
     txns = transactions
     if any("category" not in t for t in txns):
         txns = categorize_transactions(txns, use_llm=use_llm)
     facts = analysis_facts(txns)
-    plain = answer_query(question, txns, use_llm=False)["answer"]
-    if plain == UNKNOWN_ANSWER:
-        plain = _plain_analysis(facts)
-    return {"answer": plain, "numbers": facts, "supporting_transactions": []}
+    return {"answer": rich_analysis(facts), "numbers": facts, "supporting_transactions": []}
 
 
 FACT_AMOUNT_KEYS = {"total", "amount", "monthly_cost", "income", "spending", "difference",
-                    "total_spent", "monthly_total"}
+                    "total_spent", "monthly_total", "fixed_costs", "variable_spending",
+                    "average_monthly_spending", "fixed_costs_total", "variable_spending_total",
+                    "average_monthly_fixed_costs", "average_monthly_variable_spending",
+                    "recurring_monthly_cost"}
 
 
 def format_facts(value, key: str | None = None):

@@ -45,6 +45,8 @@ Rules:
 - Write amounts as "Rs" with Indian comma grouping, e.g. Rs 1,25,000. Never use the rupee symbol.
 - If parsing fails, say so and ask the user to upload a CSV or Excel file instead.
 - Keep answers short: 1-4 sentences, plain text, no markdown tables.
+- Use only numbers and dates from the current tool results. Never use numbers from earlier turns,
+  and never mention an amount or date that is not in the facts.
 - After analyze_spending you get a facts object. Write a helpful, specific analysis in plain words,
   under about 150 words, with 3 to 5 concrete suggestions as short lines starting with "-". Quote
   numbers exactly as the facts give them, digit for digit with decimals and the % sign (write 39.4%,
@@ -102,6 +104,10 @@ FINANCE_WORDS = (r"\b(spen[dt]|spending|expenses?|costs?|paid|pay|paying|save|sa
                  r"invest\w*|money|rs|rupees?|jan\w*|feb\w*|mar\w*|apr\w*|may|jun\w*|jul\w*|aug\w*|"
                  r"sep\w*|oct\w*|nov\w*|dec\w*)\b|\d")
 ASKS_FOR_UPLOAD = r"\b(upload|attach|share|provide)\b.{0,40}\b(statement|file|csv|pdf|excel)\b"
+# Questions that want analysis or advice: if the model's reply is rejected twice, the Python
+# analysis is shown instead of the plain answer_query result.
+ANALYSIS_WORDS = (r"\b(cut|save|saving|savings|reduce|trim|budget|advice|overview|improve|waste|"
+                  r"where.{0,25}money|money.{0,20}going|how am i doing)\b")
 ANOMALY_WORDS = r"\b(suspicious|unusual|fraud\w*|duplicate\w*|double|anomal\w*|strange|weird|odd|scam)\b"
 
 
@@ -114,6 +120,11 @@ def _clean_content(blocks: list[dict]) -> list[dict]:
         elif b.get("type") == "tool_use":
             cleaned.append({"type": "tool_use", "id": b["id"], "name": b["name"], "input": b["input"]})
     return cleaned
+
+
+def _model_view(result: dict) -> dict:
+    """A tool result as the model (and the number guard) see it: without the Python fallback text."""
+    return {k: v for k, v in result.items() if k != "fallback_answer"}
 
 
 def _cap(items: list) -> list:
@@ -215,7 +226,7 @@ class StatementAgent:
         if error:
             return error
         result = analyze_spending(question, self.categorized, use_llm=False)
-        return {"ok": True, "facts": format_facts(result["numbers"]), "plain_answer": result["answer"]}
+        return {"ok": True, "facts": format_facts(result["numbers"]), "fallback_answer": result["answer"]}
 
     def _run_tool(self, name: str, args: dict) -> dict:
         """Run one tool, time it and add it to tool_log."""
@@ -286,7 +297,7 @@ class StatementAgent:
                     f"{i['merchant']} ({i['amount']} {i['frequency']}, {i['kind']})" for i in others) + "."
             return text
         if name == "analyze_spending":
-            return r["plain_answer"]
+            return r["fallback_answer"]
         if name == "find_anomalies":
             if not r["count"]:
                 return "Nothing unusual found."
@@ -363,7 +374,8 @@ class StatementAgent:
         # Last few turns (user text + final answer only) so follow-ups work; tool traffic of
         # this message lives only in `convo`.
         convo = self.messages[-2 * HISTORY_TURNS:] + [{"role": "user", "content": text}]
-        results = []  # (tool name, result) this message, for the number guard
+        results = []        # (tool name, result) this message, for the number guard
+        first_bad = None    # numbers that got the first reply rejected (set once we retried)
 
         for _ in range(MAX_STEPS):
             step = llm.run_agent_turn(convo, TOOLS, system=self._system_prompt())
@@ -371,19 +383,25 @@ class StatementAgent:
                 return None
             convo.append({"role": "assistant", "content": _clean_content(step["assistant_content"])})
             if step["type"] == "text":
-                return self._finish(text, self._guarded(step["text"].strip(), results, message))
+                verdict = self._judge(step["text"].strip(), results, message)
+                if verdict["status"] == "reject" and first_bad is None:
+                    first_bad = verdict["bad"]  # retry ONCE, telling the model what was wrong
+                    convo.append({"role": "user", "content": self._retry_message(verdict)})
+                    continue
+                return self._finish(text, self._result(verdict, results, message, first_bad))
 
             tool_results = []
             for call in step["tool_calls"]:
                 result = self._run_tool(call["name"], call["input"] or {})
                 results.append((call["name"], result))
                 tool_results.append({"type": "tool_result", "tool_use_id": call["id"],
-                                     "content": json.dumps(result, ensure_ascii=False)})
+                                     "content": json.dumps(_model_view(result), ensure_ascii=False)})
             convo.append({"role": "user", "content": tool_results})
 
         # Out of steps: answer from the last tool result and close the turn.
         answer = self._plain_answer(*results[-1]) if results else "Sorry, I couldn't finish that."
-        return self._finish(text, {"answer": answer, "mode": "llm", "guard": "max steps reached"})
+        return self._finish(text, {"answer": answer, "mode": "llm", "guard": "max steps reached",
+                                   "retried": first_bad is not None})
 
     def _finish(self, text: str, result: dict) -> dict:
         """Remember the exchange (question + final answer) for the next turns."""
@@ -391,23 +409,59 @@ class StatementAgent:
                           {"role": "assistant", "content": result["answer"]}]
         return result
 
-    def _guarded(self, answer: str, results: list, message: str) -> dict:
-        """Replace the model's answer if it states a number no tool returned."""
-        if not results and self.transactions and (
-                re.search(FINANCE_WORDS, message, re.I) or re.search(ASKS_FOR_UPLOAD, answer, re.I)):
-            # A statement is loaded and the model skipped the tools: do not show its text.
-            name, args = self._route(message)
-            fallback = self._run_tool(name, args)
-            return {"answer": self._plain_answer(name, fallback), "mode": "llm",
-                    "guard": f"no tool called; answered with {name}", "rejected_answer": answer}
-        allowed = {"tools": [r for _, r in results], "user": message, "statement": self._statement_facts()}
+    def _judge(self, answer: str, results: list, message: str) -> dict:
+        """Check the model's reply. status: ok | no_tool | reject (bad numbers or empty) | refuse."""
+        if not results:
+            if self.transactions and (re.search(FINANCE_WORDS, message, re.I)
+                                      or re.search(ASKS_FOR_UPLOAD, answer, re.I)):
+                return {"status": "no_tool", "answer": answer}  # statement loaded, tools skipped
+            if unsupported_numbers(answer, {"user": message, "statement": self._statement_facts()}):
+                return {"status": "refuse", "answer": answer}
+            return {"status": "ok", "answer": answer}
+        allowed = {"tools": [_model_view(r) for _, r in results], "user": message,
+                   "statement": self._statement_facts()}
         checked = re.sub(r"(?m)^\s*\d+[.)]\s", "", answer)  # list numbering "1. " is not a figure
-        bad = unsupported_numbers(checked, allowed) if results else []
+        bad = unsupported_numbers(checked, allowed)
         if not answer or bad:
-            fallback = self._plain_answer(*results[-1]) if results else "Sorry, I couldn't answer that."
-            return {"answer": fallback, "mode": "llm", "guard": f"replaced unsupported numbers {bad}",
-                    "rejected_answer": answer}
-        if not results and unsupported_numbers(answer, {"user": message, "statement": self._statement_facts()}):
+            return {"status": "reject", "answer": answer, "bad": bad}
+        return {"status": "ok", "answer": answer}
+
+    @staticmethod
+    def _retry_message(verdict: dict) -> str:
+        if not verdict["answer"]:
+            return "Your reply was empty. Answer again using only numbers and dates from the tool results."
+        shown = ", ".join(f"{n:,.2f}".rstrip("0").rstrip(".") for n in verdict["bad"])
+        return (f"Your reply was rejected: these numbers or dates are not in the tool results: {shown}. "
+                "Rewrite the answer using only numbers and dates that appear in the tool results, "
+                "copied exactly. Do not add, subtract or round anything, and do not use numbers "
+                "from earlier turns.")
+
+    def _fallback(self, results: list, message: str) -> str:
+        """Python-only answer when the model could not be trusted."""
+        if re.search(ANALYSIS_WORDS, message, re.I) or any(n == "analyze_spending" for n, _ in results):
+            name = "analyze_spending"
+            last = next((r for n, r in reversed(results) if n == name), None) or self._run_tool(name, {"question": message})
+            return self._plain_answer(name, last)
+        return self._plain_answer(*results[-1]) if results else "Sorry, I couldn't answer that."
+
+    def _result(self, verdict: dict, results: list, message: str, first_bad) -> dict:
+        retried = first_bad is not None
+        if verdict["status"] == "ok":
+            guard = f"first reply rejected (numbers not in the tool results: {first_bad}); rewrite accepted" \
+                if retried else ""
+            return {"answer": verdict["answer"], "mode": "llm", "guard": guard, "retried": retried}
+        if verdict["status"] == "no_tool":
+            name, args = self._route(message)
+            if re.search(ANALYSIS_WORDS, message, re.I):
+                name, args = "analyze_spending", {"question": message}
+            fallback = self._run_tool(name, args)
+            return {"answer": self._plain_answer(name, fallback), "mode": "llm", "retried": False,
+                    "guard": f"no tool called; answered with {name}", "rejected_answer": verdict["answer"]}
+        if verdict["status"] == "refuse":
             return {"answer": "Sorry, I need to look at your statement for that. Please ask again.",
-                    "mode": "llm", "guard": "replaced unsupported numbers"}
-        return {"answer": answer, "mode": "llm", "guard": ""}
+                    "mode": "llm", "guard": "replaced unsupported numbers", "retried": False}
+        # rejected a second time: Python-only answer
+        return {"answer": self._fallback(results, message), "mode": "llm", "retried": retried,
+                "guard": f"rejected twice, numbers not in the tool results: {first_bad} then {verdict['bad']}"
+                         if retried else f"replaced unsupported numbers {verdict['bad']}",
+                "rejected_answer": verdict["answer"]}
