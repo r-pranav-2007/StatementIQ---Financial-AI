@@ -32,7 +32,7 @@ REQUESTS = [
     ("Is there anything suspicious in my account?", False, "find_anomalies"),
     ("How much did I spend on food in August?", False, "answer_query"),
     ("Compare August and July for me.", False, "answer_query"),
-    ("What can I cut to save some money?", False, "answer_query"),
+    ("What can I cut to save some money?", False, ("answer_query", "analyze_spending")),
 ]
 
 agent = StatementAgent(use_llm=USE_LLM)
@@ -43,7 +43,7 @@ for i, (message, attach, expected) in enumerate(REQUESTS, 1):
     result = agent.chat(message, file_path=FILE if attach else None)
     tools_used = [entry["tool"] for entry in result["tool_log"]]
     first = tools_used[0] if tools_used else "(none)"
-    ok = first == expected
+    ok = first in (expected if isinstance(expected, tuple) else (expected,))
     # Request 1 must also categorize right after parsing.
     if i == 1:
         ok = ok and tools_used[:2] == ["parse_statement", "categorize_transactions"]

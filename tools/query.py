@@ -606,3 +606,137 @@ def answer_query(question: str, transactions: list[dict], use_llm: bool = True) 
     if llm_on and numbers:
         answer = _phrase_with_llm(question, numbers, items, list_text) or template
     return {"answer": answer, "numbers": numbers, "supporting_transactions": supporting}
+
+
+# ---------------------------------------------------------------------------
+# analyze_spending: compact facts for an open-ended analysis
+# ---------------------------------------------------------------------------
+
+SAVINGS_CATEGORIES = ["Food Delivery", "Shopping", "Entertainment", "Subscriptions"]  # cut-able
+SAVING_CATEGORIES = {"Investments"}  # money put away: counted as saving, never a cut target
+CUT_LEVELS = (10, 20)                # percent cuts pre-computed for each cut-able category
+TOP_MERCHANTS_SHOWN = 8
+FACT_LIST_LIMIT = 10                 # max recurring items / alerts in the facts
+
+
+def analysis_facts(txns: list[dict]) -> dict:
+    """Everything an analysis may quote, computed in Python. The LLM only reads this."""
+    debits = [t for t in txns if t["type"] == "debit"]
+    credits = [t for t in txns if t["type"] == "credit"]
+    spent, income = _total(debits), _total(credits)
+    months = sorted({t["date"][:7] for t in txns})
+
+    by_cat = {}
+    for t in debits:
+        by_cat[t["category"]] = by_cat.get(t["category"], 0) + t["amount"]
+    ranked = sorted(by_cat.items(), key=lambda kv: -kv[1])
+    categories = [{"category": c, "total": round(v, 2),
+                   "share_percent": round(v / spent * 100, 1) if spent else 0,
+                   "kind": "saving" if c in SAVING_CATEGORIES else "spending"} for c, v in ranked]
+
+    monthly, previous = [], None
+    for m in months:
+        total = _total(_filter(debits, m))
+        row = {"month": _month_label(m), "total": total}
+        if previous:  # month-over-month change, signed
+            row["change_percent"] = round((total - previous) / previous * 100, 1)
+        monthly.append(row)
+        previous = total
+
+    merchant_totals, merchant_counts = {}, {}
+    for t in debits:
+        if t["category"] != "Transfers" and t["merchant"] != "ATM":
+            merchant_totals[t["merchant"]] = merchant_totals.get(t["merchant"], 0) + t["amount"]
+            merchant_counts[t["merchant"]] = merchant_counts.get(t["merchant"], 0) + 1
+    top = sorted(merchant_totals.items(), key=lambda kv: -kv[1])[:TOP_MERCHANTS_SHOWN]
+
+    recurring = detect_recurring(txns)
+    subs = summarize_subscriptions(recurring)
+    flags = find_anomalies(txns, recurring)
+    net = round(income - spent, 2)
+
+    potential = []
+    for c in SAVINGS_CATEGORIES:
+        if by_cat.get(c):
+            potential.append({"category": c, "total": round(by_cat[c], 2),
+                              **{f"cut_{p}_percent_saves": round(by_cat[c] * p / 100) for p in CUT_LEVELS}})  # whole rupees
+
+    facts = {
+        "period": f"{_month_label(months[0])} to {_month_label(months[-1])}" if months else "",
+        "total_spent": spent,
+        "categories": categories,
+        "monthly": monthly,
+        "top_merchants": [{"merchant": m, "total": round(v, 2), "transactions": merchant_counts[m]}
+                          for m, v in top],
+        "recurring": [{"merchant": r["merchant"], "amount": r["amount"], "frequency": r["frequency"],
+                       "kind": r["kind"], "monthly_cost": r["monthly_cost"]}
+                      for r in recurring[:FACT_LIST_LIMIT]],
+        "subscriptions": subs,
+        "alert_count": len(flags),
+        "alerts": [f["reason"] for f in flags[:FACT_LIST_LIMIT]],
+        "income_vs_spending": {"income": income, "spending": spent, "difference": abs(net),
+                               "result": "saved" if net >= 0 else "overspent"},
+        "cut_levels_percent": list(CUT_LEVELS),
+        "savings_potential": potential,
+    }
+    invested = round(sum(v for c, v in by_cat.items() if c in SAVING_CATEGORIES), 2)
+    if invested:
+        facts["invested"] = {"total": invested, "note": "saving, not something to cut"}
+    return facts
+
+
+def _plain_analysis(facts: dict) -> str:
+    """A plain-Python overview built only from the facts (used when no LLM answer is trusted)."""
+    cats = ", ".join(f"{c['category']} {inr(c['total'])} ({c['share_percent']}%)"
+                     for c in facts["categories"][:3])
+    months = ", ".join(f"{m['month']} {inr(m['total'])}" for m in facts["monthly"])
+    text = (f"You spent {inr(facts['total_spent'])} over {facts['period']}. "
+            f"Biggest categories: {cats}. By month: {months}.")
+    if facts["savings_potential"]:
+        text += " Easiest areas to cut back: " + ", ".join(
+            f"{p['category']} ({inr(p['total'])})" for p in facts["savings_potential"]) + "."
+    if "invested" in facts:
+        text += f" Investments ({inr(facts['invested']['total'])}) count as saving, not spending to cut."
+    return text
+
+
+def analyze_spending(question: str, transactions: list[dict], use_llm: bool = True) -> dict:
+    """Facts for an open-ended question plus a plain Python answer.
+
+    Returns {"answer", "numbers", "supporting_transactions"}. "numbers" is the facts dict; "answer"
+    is the plain answer from answer_query (or a short Python overview when that cannot answer).
+    In LLM mode the agent's model writes the analysis from "numbers" and the number guard checks
+    it against them; "answer" is what is shown if the guard rejects it.
+    """
+    txns = transactions
+    if any("category" not in t for t in txns):
+        txns = categorize_transactions(txns, use_llm=use_llm)
+    facts = analysis_facts(txns)
+    plain = answer_query(question, txns, use_llm=False)["answer"]
+    if plain == UNKNOWN_ANSWER:
+        plain = _plain_analysis(facts)
+    return {"answer": plain, "numbers": facts, "supporting_transactions": []}
+
+
+FACT_AMOUNT_KEYS = {"total", "amount", "monthly_cost", "income", "spending", "difference",
+                    "total_spent", "monthly_total"}
+
+
+def format_facts(value, key: str | None = None):
+    """Copy of the facts with amounts as "Rs 1,25,000" and percentages as "24.6%" strings.
+
+    The model copies these strings instead of formatting or rounding raw numbers itself.
+    """
+    if isinstance(value, dict):
+        return {k: format_facts(v, k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [format_facts(v, key) for v in value]
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    if key in FACT_AMOUNT_KEYS or (key or "").endswith("_saves"):
+        return inr(value)
+    if key == "share_percent":
+        return f"{value}%"
+    if key == "change_percent":
+        return f"{value:+}%"
+    return value

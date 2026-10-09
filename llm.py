@@ -275,7 +275,8 @@ def phrase_answer(question: str, numbers: dict) -> str:
 
 def run_agent_turn(messages: list[dict], tool_declarations: list[dict],
                    system: str = "You are StatementIQ, a personal finance assistant. "
-                                 "Use the tools for every number; never invent figures.") -> dict:
+                                 "Use the tools for every number; never invent figures.",
+                   temperature: float = 0) -> dict:
     """One step of a tool-using agent.
 
     tool_declarations use Anthropic's format: {"name", "description", "input_schema"}.
@@ -289,7 +290,8 @@ def run_agent_turn(messages: list[dict], tool_declarations: list[dict],
         return {"type": "error", "text": "No ANTHROPIC_API_KEY set - agent is unavailable in no-LLM mode."}
     for attempt in range(2):  # first try + one retry
         try:
-            response = _call(system, messages, max_tokens=AGENT_MAX_TOKENS, tools=tool_declarations)
+            response = _call(system, messages, max_tokens=AGENT_MAX_TOKENS, tools=tool_declarations,
+                             temperature=temperature)
             content = [block.model_dump() for block in response.content]
             if response.stop_reason == "tool_use":
                 calls = [{"id": b.id, "name": b.name, "input": b.input}
