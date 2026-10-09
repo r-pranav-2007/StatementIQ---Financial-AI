@@ -24,7 +24,7 @@ FREQUENCIES = {
 }
 PER_MONTH = {"weekly": 52 / 12, "monthly": 1.0, "yearly": 1 / 12}
 
-IGNORED_CATEGORIES = {"Transfers", "Other"}
+IGNORED_CATEGORIES = {"Transfers"}  # person payments; unknown merchants ("Other") can still be recurring
 IGNORED_MERCHANTS = {"ATM"}
 INCOME_ROUNDING = 1000  # income is grouped by (category, amount rounded to Rs 1,000)
 

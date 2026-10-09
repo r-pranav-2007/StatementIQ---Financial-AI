@@ -1,0 +1,676 @@
+{
+ "total_rows": 79,
+ "transactions": [
+  {
+   "date": "2026-07-02",
+   "amount": 614,
+   "type": "debit",
+   "merchant": "Indian Oil",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-07-03",
+   "amount": 649,
+   "type": "debit",
+   "merchant": "Netflix",
+   "category": "Subscriptions",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-07-05",
+   "amount": 14500,
+   "type": "debit",
+   "merchant": "Rent",
+   "category": "Rent",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-07-06",
+   "amount": 1094,
+   "type": "debit",
+   "merchant": "1mg",
+   "category": "Health",
+   "tag": null
+  },
+  {
+   "date": "2026-07-07",
+   "amount": 2703,
+   "type": "debit",
+   "merchant": "DMart",
+   "category": "Groceries",
+   "tag": null
+  },
+  {
+   "date": "2026-07-07",
+   "amount": 5000,
+   "type": "debit",
+   "merchant": "SIP",
+   "category": "Investments",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-07-08",
+   "amount": 119,
+   "type": "debit",
+   "merchant": "Spotify",
+   "category": "Subscriptions",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-07-12",
+   "amount": 341,
+   "type": "debit",
+   "merchant": "Third Wave Coffee",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-07-12",
+   "amount": 1500,
+   "type": "debit",
+   "merchant": "Meera K",
+   "category": "Transfers",
+   "tag": null
+  },
+  {
+   "date": "2026-07-12",
+   "amount": 300,
+   "type": "debit",
+   "merchant": "Vikash R",
+   "category": "Transfers",
+   "tag": null
+  },
+  {
+   "date": "2026-07-12",
+   "amount": 1049,
+   "type": "debit",
+   "merchant": "ACT Fibernet",
+   "category": "Bills and Utilities",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-07-15",
+   "amount": 1540,
+   "type": "debit",
+   "merchant": "Indian Oil",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-07-15",
+   "amount": 129,
+   "type": "debit",
+   "merchant": "YouTube Premium",
+   "category": "Subscriptions",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-07-17",
+   "amount": 655,
+   "type": "debit",
+   "merchant": "1mg",
+   "category": "Health",
+   "tag": null
+  },
+  {
+   "date": "2026-07-17",
+   "amount": 554,
+   "type": "debit",
+   "merchant": "Starbucks",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-07-18",
+   "amount": 349,
+   "type": "debit",
+   "merchant": "Jio",
+   "category": "Bills and Utilities",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-07-19",
+   "amount": 1058,
+   "type": "debit",
+   "merchant": "Zepto",
+   "category": "Groceries",
+   "tag": null
+  },
+  {
+   "date": "2026-07-20",
+   "amount": 1870,
+   "type": "debit",
+   "merchant": "Indian Oil",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-07-22",
+   "amount": 1120,
+   "type": "debit",
+   "merchant": "Tangedco",
+   "category": "Bills and Utilities",
+   "tag": "varying_bill"
+  },
+  {
+   "date": "2026-07-26",
+   "amount": 1000,
+   "type": "debit",
+   "merchant": "Meera K",
+   "category": "Transfers",
+   "tag": null
+  },
+  {
+   "date": "2026-07-26",
+   "amount": 171,
+   "type": "debit",
+   "merchant": "Rapido",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-07-26",
+   "amount": 684,
+   "type": "debit",
+   "merchant": "Swiggy",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-07-28",
+   "amount": 196,
+   "type": "debit",
+   "merchant": "Zomato",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-07-31",
+   "amount": 52000,
+   "type": "credit",
+   "merchant": "Salary",
+   "category": "Income",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-08-01",
+   "amount": 1500,
+   "type": "debit",
+   "merchant": "Deepa N",
+   "category": "Transfers",
+   "tag": null
+  },
+  {
+   "date": "2026-08-03",
+   "amount": 798,
+   "type": "debit",
+   "merchant": "IRCTC",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-08-03",
+   "amount": 561,
+   "type": "debit",
+   "merchant": "Swiggy",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-08-03",
+   "amount": 649,
+   "type": "debit",
+   "merchant": "Netflix",
+   "category": "Subscriptions",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-08-05",
+   "amount": 678,
+   "type": "debit",
+   "merchant": "Swiggy",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-08-05",
+   "amount": 437,
+   "type": "debit",
+   "merchant": "Swiggy",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-08-05",
+   "amount": 857,
+   "type": "debit",
+   "merchant": "Blinkit",
+   "category": "Groceries",
+   "tag": null
+  },
+  {
+   "date": "2026-08-05",
+   "amount": 14500,
+   "type": "debit",
+   "merchant": "Rent",
+   "category": "Rent",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-08-07",
+   "amount": 5000,
+   "type": "debit",
+   "merchant": "SIP",
+   "category": "Investments",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-08-08",
+   "amount": 119,
+   "type": "debit",
+   "merchant": "Spotify",
+   "category": "Subscriptions",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-08-10",
+   "amount": 1100,
+   "type": "debit",
+   "merchant": "Blinkit",
+   "category": "Groceries",
+   "tag": null
+  },
+  {
+   "date": "2026-08-12",
+   "amount": 1049,
+   "type": "debit",
+   "merchant": "ACT Fibernet",
+   "category": "Bills and Utilities",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-08-13",
+   "amount": 2491,
+   "type": "debit",
+   "merchant": "Myntra",
+   "category": "Shopping",
+   "tag": null
+  },
+  {
+   "date": "2026-08-13",
+   "amount": 348,
+   "type": "debit",
+   "merchant": "Swiggy",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-08-13",
+   "amount": 235,
+   "type": "debit",
+   "merchant": "Uber",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-08-15",
+   "amount": 129,
+   "type": "debit",
+   "merchant": "YouTube Premium",
+   "category": "Subscriptions",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-08-18",
+   "amount": 349,
+   "type": "debit",
+   "merchant": "Jio",
+   "category": "Bills and Utilities",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-08-19",
+   "amount": 647,
+   "type": "debit",
+   "merchant": "Blinkit",
+   "category": "Groceries",
+   "tag": "dup"
+  },
+  {
+   "date": "2026-08-19",
+   "amount": 647,
+   "type": "debit",
+   "merchant": "Blinkit",
+   "category": "Groceries",
+   "tag": "dup"
+  },
+  {
+   "date": "2026-08-21",
+   "amount": 1586,
+   "type": "debit",
+   "merchant": "Udemy",
+   "category": "Education",
+   "tag": null
+  },
+  {
+   "date": "2026-08-22",
+   "amount": 1480,
+   "type": "debit",
+   "merchant": "Tangedco",
+   "category": "Bills and Utilities",
+   "tag": "varying_bill"
+  },
+  {
+   "date": "2026-08-24",
+   "amount": 198,
+   "type": "debit",
+   "merchant": "Uber",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-08-25",
+   "amount": 517,
+   "type": "debit",
+   "merchant": "Uber",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-08-25",
+   "amount": 1000,
+   "type": "debit",
+   "merchant": "Deepa N",
+   "category": "Transfers",
+   "tag": null
+  },
+  {
+   "date": "2026-08-25",
+   "amount": 1299,
+   "type": "credit",
+   "merchant": "Myntra",
+   "category": "Shopping",
+   "tag": "refund"
+  },
+  {
+   "date": "2026-08-28",
+   "amount": 500,
+   "type": "debit",
+   "merchant": "Arjun S",
+   "category": "Transfers",
+   "tag": null
+  },
+  {
+   "date": "2026-08-31",
+   "amount": 52000,
+   "type": "credit",
+   "merchant": "Salary",
+   "category": "Income",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-09-01",
+   "amount": 1857,
+   "type": "debit",
+   "merchant": "Amazon",
+   "category": "Shopping",
+   "tag": null
+  },
+  {
+   "date": "2026-09-03",
+   "amount": 1822,
+   "type": "debit",
+   "merchant": "Indian Oil",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-09-03",
+   "amount": 649,
+   "type": "debit",
+   "merchant": "Netflix",
+   "category": "Subscriptions",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-09-04",
+   "amount": 1000,
+   "type": "debit",
+   "merchant": "Deepa N",
+   "category": "Transfers",
+   "tag": null
+  },
+  {
+   "date": "2026-09-05",
+   "amount": 14500,
+   "type": "debit",
+   "merchant": "Rent",
+   "category": "Rent",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-09-06",
+   "amount": 2215,
+   "type": "debit",
+   "merchant": "Myntra",
+   "category": "Shopping",
+   "tag": null
+  },
+  {
+   "date": "2026-09-07",
+   "amount": 5000,
+   "type": "debit",
+   "merchant": "SIP",
+   "category": "Investments",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-09-08",
+   "amount": 119,
+   "type": "debit",
+   "merchant": "Spotify",
+   "category": "Subscriptions",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-09-12",
+   "amount": 1049,
+   "type": "debit",
+   "merchant": "ACT Fibernet",
+   "category": "Bills and Utilities",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-09-13",
+   "amount": 480,
+   "type": "debit",
+   "merchant": "Apollo Pharmacy",
+   "category": "Health",
+   "tag": null
+  },
+  {
+   "date": "2026-09-14",
+   "amount": 1412,
+   "type": "debit",
+   "merchant": "Myntra",
+   "category": "Shopping",
+   "tag": null
+  },
+  {
+   "date": "2026-09-14",
+   "amount": 42999,
+   "type": "debit",
+   "merchant": "Croma",
+   "category": "Shopping",
+   "tag": "spike"
+  },
+  {
+   "date": "2026-09-15",
+   "amount": 393,
+   "type": "debit",
+   "merchant": "Starbucks",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-09-15",
+   "amount": 129,
+   "type": "debit",
+   "merchant": "YouTube Premium",
+   "category": "Subscriptions",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-09-16",
+   "amount": 279,
+   "type": "debit",
+   "merchant": "Swiggy",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-09-18",
+   "amount": 349,
+   "type": "debit",
+   "merchant": "Jio",
+   "category": "Bills and Utilities",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-09-20",
+   "amount": 1531,
+   "type": "debit",
+   "merchant": "Amazon",
+   "category": "Shopping",
+   "tag": null
+  },
+  {
+   "date": "2026-09-20",
+   "amount": 270,
+   "type": "debit",
+   "merchant": "Zepto",
+   "category": "Groceries",
+   "tag": null
+  },
+  {
+   "date": "2026-09-21",
+   "amount": 299,
+   "type": "debit",
+   "merchant": "SonyLIV",
+   "category": "Subscriptions",
+   "tag": "new_sub"
+  },
+  {
+   "date": "2026-09-22",
+   "amount": 1310,
+   "type": "debit",
+   "merchant": "Tangedco",
+   "category": "Bills and Utilities",
+   "tag": "varying_bill"
+  },
+  {
+   "date": "2026-09-23",
+   "amount": 1298,
+   "type": "debit",
+   "merchant": "DMart",
+   "category": "Groceries",
+   "tag": null
+  },
+  {
+   "date": "2026-09-25",
+   "amount": 430,
+   "type": "debit",
+   "merchant": "Uber",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-09-26",
+   "amount": 385,
+   "type": "debit",
+   "merchant": "Uber",
+   "category": "Transport",
+   "tag": null
+  },
+  {
+   "date": "2026-09-27",
+   "amount": 612,
+   "type": "debit",
+   "merchant": "Swiggy",
+   "category": "Food Delivery",
+   "tag": null
+  },
+  {
+   "date": "2026-09-27",
+   "amount": 1484,
+   "type": "debit",
+   "merchant": "Udemy",
+   "category": "Education",
+   "tag": null
+  },
+  {
+   "date": "2026-09-27",
+   "amount": 30000,
+   "type": "debit",
+   "merchant": "Kavitha Rajan",
+   "category": "Transfers",
+   "tag": "big_transfer"
+  },
+  {
+   "date": "2026-09-30",
+   "amount": 52000,
+   "type": "credit",
+   "merchant": "Salary",
+   "category": "Income",
+   "tag": "recurring"
+  },
+  {
+   "date": "2026-09-30",
+   "amount": 187,
+   "type": "credit",
+   "merchant": "Interest",
+   "category": "Income",
+   "tag": "interest"
+  }
+ ],
+ "recurring_expected": [
+  "Salary",
+  "Rent",
+  "ACT Fibernet",
+  "Jio",
+  "Netflix",
+  "Spotify",
+  "YouTube Premium",
+  "SIP"
+ ],
+ "recurring_hard_cases": {
+  "Tangedco": "bill amount varies by more than 10%"
+ },
+ "anomalies": [
+  {
+   "type": "duplicate",
+   "date": "2026-08-19",
+   "merchant": "Blinkit",
+   "amount": 647
+  },
+  {
+   "type": "spike",
+   "date": "2026-09-14",
+   "merchant": "Croma",
+   "amount": 42999
+  },
+  {
+   "type": "new_subscription",
+   "date": "2026-09-21",
+   "merchant": "SonyLIV",
+   "amount": 299
+  },
+  {
+   "type": "big_transfer",
+   "date": "2026-09-27",
+   "merchant": "Kavitha Rajan",
+   "amount": 30000
+  }
+ ]
+}

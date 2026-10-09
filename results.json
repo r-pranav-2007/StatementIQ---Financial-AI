@@ -1,6 +1,6 @@
 {
   "date": "2026-10-09",
-  "llm_run": true,
+  "llm_run": false,
   "results": [
     {
       "section": "Parsing",
@@ -70,11 +70,7 @@
         "total": 77,
         "note": ""
       },
-      "llm": {
-        "passed": 77,
-        "total": 77,
-        "note": ""
-      }
+      "llm": null
     },
     {
       "section": "Categorization",
@@ -84,11 +80,7 @@
         "total": 77,
         "note": ""
       },
-      "llm": {
-        "passed": 77,
-        "total": 77,
-        "note": ""
-      }
+      "llm": null
     },
     {
       "section": "Categorization",
@@ -98,11 +90,7 @@
         "total": 25,
         "note": ""
       },
-      "llm": {
-        "passed": 25,
-        "total": 25,
-        "note": ""
-      }
+      "llm": null
     },
     {
       "section": "Categorization",
@@ -112,11 +100,7 @@
         "total": 25,
         "note": ""
       },
-      "llm": {
-        "passed": 23,
-        "total": 25,
-        "note": ""
-      }
+      "llm": null
     },
     {
       "section": "Recurring detection",
@@ -166,11 +150,7 @@
         "total": 20,
         "note": "0 hallucinated"
       },
-      "llm": {
-        "passed": 20,
-        "total": 20,
-        "note": "0 hallucinated"
-      }
+      "llm": null
     },
     {
       "section": "Agent",
@@ -180,17 +160,8 @@
         "total": 6,
         "note": ""
       },
-      "llm": {
-        "passed": 6,
-        "total": 6,
-        "note": ""
-      }
+      "llm": null
     }
   ],
-  "api_usage": {
-    "calls": 64,
-    "input_tokens": 50913,
-    "output_tokens": 4214,
-    "estimated_cost_usd": 0.072
-  }
+  "api_usage": null
 }

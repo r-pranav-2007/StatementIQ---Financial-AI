@@ -72,9 +72,13 @@ def _client():
     return _cached_client
 
 
-def _call(system: str, messages: list[dict], max_tokens: int = 1024, tools: list | None = None):
+def _call(system: str, messages: list[dict], max_tokens: int = 1024, tools: list | None = None,
+          temperature: float | None = None):
     """One request to the model. Raises on failure (callers catch)."""
     kwargs = {"model": MODEL, "max_tokens": max_tokens, "system": system, "messages": messages}
+    if temperature is not None:
+        # Sent as a raw body field: the installed SDK's create() has no temperature argument.
+        kwargs["extra_body"] = {"temperature": temperature}
     if tools:
         kwargs["tools"] = tools
     response = _client().messages.create(**kwargs)
@@ -103,11 +107,12 @@ def _text_of(response) -> str:
     return "".join(block.text for block in response.content if block.type == "text")
 
 
-def _ask_json(system: str, user: str, max_tokens: int = 1024) -> dict:
+def _ask_json(system: str, user: str, max_tokens: int = 1024, temperature: float | None = None) -> dict:
     """Ask for a JSON object. Retries once if the reply is not valid JSON."""
     last_error = None
     for _ in range(2):  # first try + one retry
-        reply = _text_of(_call(system, [{"role": "user", "content": user}], max_tokens))
+        reply = _text_of(_call(system, [{"role": "user", "content": user}], max_tokens,
+                               temperature=temperature))
         # Accept a bare object or one wrapped in ```json fences.
         match = re.search(r"\{.*\}", reply, re.S)
         try:
@@ -137,10 +142,13 @@ def has_api_key() -> bool:
     return bool(os.environ.get(API_KEY_ENV))
 
 
-def classify_batch(merchant_names: list[str], categories: list[str]) -> dict[str, str]:
+def classify_batch(merchant_names: list[str], categories: list[str],
+                   notes: dict[str, str] | None = None) -> dict[str, str]:
     """Map each merchant name to one of `categories`, all in ONE request.
 
-    Anything missing, invalid or failed comes back as "Other".
+    `merchant_names` are CLEANED merchant names (never raw narrations). `notes` optionally maps a
+    merchant to the payment note(s) written with it, e.g. "Dinner split". Temperature is 0 so the
+    same input gives the same answer. Anything missing, invalid or failed comes back as "Other".
     """
     result = {name: "Other" for name in merchant_names}
     if not merchant_names or not has_api_key():
@@ -151,13 +159,18 @@ def classify_batch(merchant_names: list[str], categories: list[str]) -> dict[str
         "Reply with JSON only: one object mapping each merchant name exactly as given to "
         "exactly one category from the allowed list. No explanation, no extra keys. "
         "If a name looks like a private person, use \"Transfers\". "
+        "Interest credited by a bank is Income, not Investments. "
         "If you are not sure, use \"Other\"."
     )
-    user = (f"Allowed categories: {json.dumps(categories)}\n"
-            f"Merchants: {json.dumps(merchant_names)}")
+    if notes:
+        items = [{"merchant": n, **({"note": notes[n]} if notes.get(n) else {})} for n in merchant_names]
+        listing = f"Merchants (with the payment note, if any): {json.dumps(items)}"
+    else:
+        listing = f"Merchants: {json.dumps(merchant_names)}"
+    user = f"Allowed categories: {json.dumps(categories)}\n{listing}"
     try:
         limit = max(CLASSIFY_MAX_TOKENS, 64 + CLASSIFY_TOKENS_PER_NAME * len(merchant_names))
-        data = _ask_json(system, user, max_tokens=limit)
+        data = _ask_json(system, user, max_tokens=limit, temperature=0)
     except Exception as e:  # network, auth, rate limit, bad JSON, ...
         _warn("classify_batch", e)
         return result

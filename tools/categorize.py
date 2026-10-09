@@ -17,7 +17,7 @@ import re
 CATEGORIES = [
     "Food Delivery", "Groceries", "Shopping", "Transport", "Bills and Utilities",
     "Subscriptions", "Rent", "Education", "Health", "Entertainment",
-    "Transfers", "Income", "Other",
+    "Investments", "Transfers", "Income", "Other",
 ]
 
 # Confidence scores for each way a category can be decided.
@@ -81,6 +81,9 @@ KNOWN_MERCHANTS = {
     "easemytrip": ("EaseMyTrip", "Transport"), "indigo": ("IndiGo", "Transport"),
     "air india": ("Air India", "Transport"), "spicejet": ("SpiceJet", "Transport"),
     "akasa air": ("Akasa Air", "Transport"), "bpcl": ("Bharat Petroleum", "Transport"),
+    "indian oil": ("Indian Oil", "Transport"), "indianoil": ("Indian Oil", "Transport"),
+    "iocl": ("Indian Oil", "Transport"), "hpcl": ("HPCL", "Transport"),
+    "hindustan petroleum": ("HPCL", "Transport"), "essar oil": ("Nayara Energy", "Transport"),
     "bharat petroleum": ("Bharat Petroleum", "Transport"), "shell": ("Shell", "Transport"),
     "nayara": ("Nayara Energy", "Transport"),
     # Bills: telecom, internet, DTH, electricity, gas, insurance
@@ -113,7 +116,7 @@ KNOWN_MERCHANTS = {
     "cult fit": ("Cult.fit", "Subscriptions"), "cultfit": ("Cult.fit", "Subscriptions"),
     "gym": ("Gym", "Subscriptions"),
     # Education
-    "coursera": ("Coursera", "Education"), "byjus": ("BYJU'S", "Education"),
+    "coursera": ("Coursera", "Education"), "udemy": ("Udemy", "Education"), "byjus": ("BYJU'S", "Education"),
     "unacademy": ("Unacademy", "Education"), "vedantu": ("Vedantu", "Education"),
     "physics wallah": ("Physics Wallah", "Education"), "upgrad": ("upGrad", "Education"),
     "simplilearn": ("Simplilearn", "Education"), "great learning": ("Great Learning", "Education"),
@@ -132,14 +135,24 @@ KNOWN_MERCHANTS = {
     "wonderla": ("Wonderla", "Entertainment"),
     # Payment apps (top-ups / transfers)
     "paytm": ("Paytm", "Transfers"), "phonepe": ("PhonePe", "Transfers"),
-    "google pay": ("Google Pay", "Transfers"), "amazon pay": ("Amazon Pay", "Transfers"),
+    "google pay": ("Google Pay", "Transfers"), "amazon pay": ("Amazon Pay", "Shopping"),
+    # Investments: brokers, mutual funds, SIPs (also the ACH/NACH debits that fund them)
+    "zerodha": ("Zerodha", "Investments"), "groww": ("Groww", "Investments"),
+    "upstox": ("Upstox", "Investments"), "angel one": ("Angel One", "Investments"),
+    "angel broking": ("Angel One", "Investments"), "kuvera": ("Kuvera", "Investments"),
+    "indmoney": ("INDmoney", "Investments"), "smallcase": ("smallcase", "Investments"),
+    "paytm money": ("Paytm Money", "Investments"), "iccl": ("Indian Clearing Corp", "Investments"),
+    "indian clearing": ("Indian Clearing Corp", "Investments"),
+    "mutual fund": ("Mutual Fund", "Investments"), "mutual funds": ("Mutual Fund", "Investments"),
+    "sip": ("SIP", "Investments"), "bse": ("BSE", "Investments"), "nse": ("NSE", "Investments"),
+    "nps": ("NPS", "Investments"), "ppf": ("PPF", "Investments"),
     # Rent, income, cash
     "rent": ("Rent", "Rent"), "nobroker": ("NoBroker", "Rent"),
     "salary": ("Salary", "Income"), "atm": ("ATM", "Other"),
 }
 
 # Brands that run several businesses: a match is only a good guess (0.8).
-AMBIGUOUS_BRANDS = {"amazon", "google", "apple", "paytm", "phonepe", "flipkart"}
+AMBIGUOUS_BRANDS = {"amazon", "google", "apple", "paytm", "phonepe", "flipkart", "amazon pay"}
 
 # Generic shop words -> category, for merchants that are not known brands.
 KEYWORD_RULES = {
@@ -148,7 +161,7 @@ KEYWORD_RULES = {
     "mart": "Groceries", "stores": "Groceries", "kirana": "Groceries",
     "provisions": "Groceries", "vegetables": "Groceries", "fruits": "Groceries", "dairy": "Groceries",
     # Food
-    "restaurant": "Food Delivery", "pizza": "Food Delivery", "biryani": "Food Delivery",
+    "restaurant": "Food Delivery", "coffee": "Food Delivery", "pizza": "Food Delivery", "biryani": "Food Delivery",
     "bakery": "Food Delivery", "sweets": "Food Delivery", "cafe": "Food Delivery",
     "dhaba": "Food Delivery", "canteen": "Food Delivery", "food court": "Food Delivery",
     "tiffin": "Food Delivery",
@@ -194,7 +207,7 @@ BUSINESS_WORDS = {
     "enterprises", "traders", "india", "online", "foods", "bank", "school", "college",
     "academy", "shop", "agency", "cabs", "motors", "fuels", "petroleum",
     "textiles", "retail", "medicals", "electronics", "bakery", "sweets", "jewellers",
-    "fuel", "petrol", "mobiles",
+    "fuel", "petrol", "mobiles", "coffee",
 }
 
 # People the user has told us about (their friends/family). A payee in this
@@ -209,12 +222,57 @@ KNOWN_PEOPLE = {"arun kumar", "suresh b", "divya m", "priya s", "vikram t"}
 WALLET_PATTERN = re.compile(r"^(paid to|sent to|received from|payment to|payment from)\s+(.+)$", re.I)
 
 # Prefixes banks put in front of the real name: "UPI/", "POS ", "PAYTM*", "GOOGLE*" ...
-PREFIX_PATTERN = re.compile(r"^((UPI|NEFT|IMPS|RTGS|POS|ACH|NACH)\s*[/\-]?\s*|[A-Z]+\*)", re.I)
+# "ACH D-" / "NACH C-" carry a debit/credit letter before the name.
+PREFIX_PATTERN = re.compile(r"^((UPI|NEFT|IMPS|RTGS|POS|ACH|NACH)\s*[/\-]?\s*(?:[DC]\s*-\s*)?|[A-Z]+\*)", re.I)
+
+# UPI narration with a reference first: UPI/<ref>/<note>/<vpa>/<bank>
+UPI_WITH_REF = re.compile(r"^UPI/(\d{6,})/([^/]*)/([^/]*)(?:/([^/]*))?$", re.I)
+# VPA handles that say nothing about who was paid (gateways, app names, bank suffixes).
+GENERIC_HANDLES = {
+    "upi", "pay", "payment", "payments", "paytm", "paytmqr", "qr", "merchant", "shop", "store",
+    "stores", "gpay", "phonepe", "ybl", "ibl", "axl", "bharatpe", "razorpay", "payu", "billdesk",
+    "cashfree", "vyapar", "okaxis", "oksbi", "okhdfc", "okicici",
+}
+CITIES = {
+    "chennai", "mumbai", "delhi", "new delhi", "bangalore", "bengaluru", "hyderabad", "kolkata",
+    "pune", "ahmedabad", "jaipur", "kochi", "coimbatore", "gurgaon", "gurugram", "noida",
+    "lucknow", "indore", "chandigarh", "surat", "nagpur", "mysore", "madurai", "bhopal",
+    "thiruvananthapuram", "visakhapatnam",
+}
+INTEREST_PATTERN = re.compile(r"\bint\.?\s?pd\b|\binterest\s+(?:paid|credit(?:ed)?)\b|\bcredit\s+interest\b", re.I)
+
+
+def _parse_upi(description: str) -> dict | None:
+    """Split "UPI/<ref>/<note>/<vpa>/<bank>" into the note and a name taken from the VPA handle.
+
+    The numeric ref is never a name. The handle before "@" is split on . _ - and digits and
+    title-cased; a phone-number or generic handle falls back to the note.
+    """
+    m = UPI_WITH_REF.match(description.strip())
+    if not m:
+        return None
+    note, vpa = m.group(2).strip(), m.group(3).strip()
+    words = [w for w in re.split(r"[._\-\d]+", vpa.split("@")[0]) if w]
+    generic = not words or " ".join(words).lower() in GENERIC_HANDLES
+    if generic:
+        return {"note": note, "words": [], "name": note.title() if note.isupper() else note}
+    return {"note": note, "words": words, "name": " ".join(words).title()}
+
+
+def extract_note(description: str) -> str:
+    """The free-text note a payer typed (UPI/<ref>/<note>/<vpa>/<bank>), or ""."""
+    parsed = _parse_upi(description)
+    return parsed["note"] if parsed else ""
 
 
 def _has_word(keyword: str, text: str) -> bool:
-    """True if `keyword` appears in `text` as a whole word (case-insensitive)."""
-    return re.search(r"(?<![a-z0-9])" + re.escape(keyword) + r"(?![a-z0-9])", text.lower()) is not None
+    """True if `keyword` appears in `text` as a whole word (case-insensitive).
+
+    A space in the keyword also matches no space, so "youtube premium" finds "YOUTUBEPREMIUM"
+    and "act fibernet" finds the handle "actfibernet".
+    """
+    pattern = re.escape(keyword).replace(r"\ ", r"\s*")
+    return re.search(r"(?<![a-z0-9])" + pattern + r"(?![a-z0-9])", text.lower()) is not None
 
 
 def _longest_match(text: str, table: dict) -> str | None:
@@ -230,6 +288,9 @@ def _search_text(description: str) -> str:
 
     "UPI/ARUN KUMAR/123/paytm" must not match the brand "paytm" via its handle.
     """
+    parsed = _parse_upi(description)
+    if parsed:  # note + VPA handle words; never the ref number or the bank name
+        return f"{parsed['note']} {' '.join(parsed['words'])}"
     text = description.strip()
     if text.upper().startswith("UPI"):
         text = re.sub(r"[/@][A-Za-z]+$", "", text)
@@ -250,6 +311,11 @@ def _extract_name(description: str) -> tuple[str, bool]:
     if m:
         return m.group(2).strip(), True
 
+    # "UPI/<ref>/<note>/<vpa>/<bank>" -> name from the VPA handle (or the note)
+    parsed = _parse_upi(text)
+    if parsed:
+        return parsed["name"], True
+
     # "UPI/ARUN KUMAR/123/okaxis" -> "ARUN KUMAR"
     if text.upper().startswith("UPI/"):
         return text.split("/")[1].strip(), True
@@ -263,7 +329,10 @@ def _extract_name(description: str) -> tuple[str, bool]:
     # Drop reference numbers (any word with 6+ digits) and "/BILL"-style suffixes
     text = re.sub(r"\S*\d{6,}\S*", "", text)
     text = text.split("/")[0]
-    return " ".join(text.split()), False
+    words = text.split()
+    while len(words) > 1 and words[-1].lower() in CITIES:  # trailing city name
+        words.pop()
+    return " ".join(words), False
 
 
 def _find_brand(description: str) -> str | None:
@@ -273,6 +342,8 @@ def _find_brand(description: str) -> str | None:
 
 def clean_merchant(description: str) -> str:
     """Turn a messy bank/UPI description into a readable merchant name."""
+    if INTEREST_PATTERN.search(description):
+        return "Bank Interest"
     brand = _find_brand(description)
     if brand:
         return KNOWN_MERCHANTS[brand][0]
@@ -299,7 +370,11 @@ def _looks_like_person(name: str) -> bool:
 
 def _rule_category(txn: dict, merchant: str) -> tuple[str, float] | None:
     """Try the rules in order. Return (category, confidence) or None."""
-    # a) Known brand
+    # 0) Interest paid by the bank
+    if txn.get("type") == "credit" and INTEREST_PATTERN.search(txn["description"]):
+        return "Income", RULE_CONFIDENCE
+
+    # a) Known brand (beats the person rule: a brand name is never a person)
     brand = _find_brand(txn["description"])
     if brand:
         confidence = AMBIGUOUS_CONFIDENCE if brand in AMBIGUOUS_BRANDS else RULE_CONFIDENCE
@@ -328,13 +403,13 @@ def _rule_category(txn: dict, merchant: str) -> tuple[str, float] | None:
 # Step 3: LLM fallback
 # ---------------------------------------------------------------------------
 
-def _ask_llm(merchants: list[str]) -> dict[str, str]:
-    """Send all unsure merchants to llm.py in one call. Empty dict if unavailable."""
+def _ask_llm(merchants: list[str], notes: dict[str, str] | None = None) -> dict[str, str]:
+    """Send all unsure merchants (cleaned names + notes) to llm.py in one call. {} if unavailable."""
     try:
         import llm  # lives at the project root
         if not llm.has_api_key():
             return {}
-        return llm.classify_batch(merchants, CATEGORIES)
+        return llm.classify_batch(merchants, CATEGORIES, notes)
     except Exception:  # llm.py missing, no network, bad reply, ...
         return {}
 
@@ -355,6 +430,7 @@ def categorize_transactions(transactions: list[dict], use_llm: bool = True) -> l
     for txn in transactions:
         out = dict(txn)
         out["merchant"] = clean_merchant(txn["description"])
+        out["note"] = extract_note(txn["description"])
         decided = _rule_category(txn, out["merchant"])
         if decided:
             out["category"], out["confidence"] = decided
@@ -373,11 +449,17 @@ def categorize_transactions(transactions: list[dict], use_llm: bool = True) -> l
     # their rule category and confidence.
     if use_llm and to_check:
         names = sorted({t["merchant"] for t in to_check})
-        answers = _ask_llm(names)
+        notes = {}
+        for t in to_check:  # up to 3 distinct notes per merchant
+            seen = notes.setdefault(t["merchant"], [])
+            if t.get("note") and t["note"] not in seen and len(seen) < 3:
+                seen.append(t["note"])
+        answers = _ask_llm(names, {m: "; ".join(v) for m, v in notes.items()})
         for t in to_check:
             category = answers.get(t["merchant"])
-            # Only accept real categories; "Other" from the LLM changes nothing.
-            if category in CATEGORIES and category != "Other":
+            # Only accept real categories; "Other" from the LLM changes nothing. A rule that was
+            # already sure (confidence 0.85 or more) is never replaced.
+            if category in CATEGORIES and category != "Other" and t["confidence"] < LLM_CHECK_BELOW:
                 t["category"], t["confidence"] = category, LLM_CONFIDENCE
 
     return results

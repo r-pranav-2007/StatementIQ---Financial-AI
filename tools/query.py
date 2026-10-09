@@ -54,6 +54,8 @@ CATEGORY_WORDS = {
     "health": "Health", "medical": "Health", "medicine": "Health", "medicines": "Health",
     "pharmacy": "Health", "doctor": "Health",
     "entertainment": "Entertainment", "movies": "Entertainment", "movie": "Entertainment",
+    "investments": "Investments", "investment": "Investments", "sip": "Investments",
+    "mutual fund": "Investments", "mutual funds": "Investments", "stocks": "Investments",
     "transfers": "Transfers", "transfer": "Transfers", "friends": "Transfers", "family": "Transfers",
     "income": "Income", "salary": "Income", "earnings": "Income",
 }
@@ -363,6 +365,12 @@ def _cut_suggestions(txns, spec, months):
         parts.append("No recurring subscriptions found.")
     if top:
         parts.append(f"Biggest discretionary spending over {period}: " + " and ".join(disc_items) + ".")
+    invested = round(sum(t["amount"] for t in rows if t["category"] == "Investments"), 2)
+    if invested:  # a saving, so shown for context but never offered as something to cut
+        numbers["investments"] = {"total": invested}
+        note = f"Investments ({inr(invested)}) count as saving, so they are not something to cut."
+        parts.append(note)
+        disc_items.append(note)
     supporting = [t for t in rows if t["category"] in dict(top) or t["merchant"] in
                   {s["merchant"] for s in subs}]
     intro = (f"You have {_plural(summary['count'], 'subscription')}, and these are the "
