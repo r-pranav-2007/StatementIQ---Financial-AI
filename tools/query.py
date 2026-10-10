@@ -74,9 +74,122 @@ INTENT_PATTERNS = [
     ("biggest_expense", r"\b(biggest|largest|highest|most expensive|costliest|priciest)\b"),
     ("category_breakdown", r"\b(breakdown|by category|per category|categories|split)\b"),
     ("monthly_trend", r"\b(each month|per month|month by month|every month|trend)\b"),
+    ("list_transactions", r"\b(show|list|display|give|see)\b.*\b(transactions?|payments?|transfers?)\b"
+                          r"|\ball\b.*\b(transactions?|payments?)\b"),
     ("total_income", r"\b(income|earn|earned|received|salary|credited)\b"),
     ("total_spend", r"\b(spend|spent|spending|pay|paid|cost|costs|expenses?|went on|go on|bill)\b"),
 ]
+
+
+
+# ---------------------------------------------------------------------------
+# Amount filters ("above 5000", "under 5k", "between 500 and 2,000") and unsupported filters
+# ---------------------------------------------------------------------------
+
+_MONTHS_RE = r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)"
+_TOKEN = (r"(?:rs\.?|inr|₹)?\s*(\d[\d,]*(?:\.\d+)?)\s*(k|thousand|lakhs?|lacs?|crores?|cr)?\b"
+          r"(?!\s*(?:months?|weeks?|days?|years?|times|transactions?|merchants?|places?|" + _MONTHS_RE + r"))")
+_SCALE = {"k": 1_000, "thousand": 1_000, "lakh": 100_000, "lakhs": 100_000, "lac": 100_000,
+          "lacs": 100_000, "cr": 10_000_000, "crore": 10_000_000, "crores": 10_000_000}
+_BETWEEN = re.compile(r"\bbetween\s+" + _TOKEN + r"\s+(?:and|to)\s+" + _TOKEN, re.I)
+_MIN_INCL = re.compile(r"\b(?:at least|minimum of|no less than)\s+" + _TOKEN + r"|" + _TOKEN
+                       + r"\s+(?:or more|and above|or above|and over)\b", re.I)
+_MAX_INCL = re.compile(r"\b(?:at most|maximum of|no more than)\s+" + _TOKEN + r"|" + _TOKEN
+                       + r"\s+(?:or less|and below|or below|and under)\b", re.I)
+_MIN_EXCL = re.compile(r"\b(?:above|over|more than|greater than|bigger than|higher than|exceeding|exceeds?|"
+                       r"crossing(?:\s+(?:above|over))?|crosses|beyond)\s+" + _TOKEN, re.I)
+_MAX_EXCL = re.compile(r"\b(?:below|under|less than|lower than|smaller than|cheaper than)\s+" + _TOKEN, re.I)
+_OUT_WORDS = r"\b(payments?|spent|spending|expenses?|paid|debits?|purchases?|withdrawals?|outgoing)\b"
+_IN_WORDS = r"\b(received|income|credits?|deposits?|salary|refunds?|incoming)\b"
+
+
+def _value(match: re.Match, first: int = 1) -> float:
+    """Number (with k / lakh / crore) from a match, starting at group `first`."""
+    groups = [g for g in match.groups()]
+    # the alternation in _MIN_INCL/_MAX_INCL leaves the unused branch as None
+    pairs = [(groups[i], groups[i + 1]) for i in range(0, len(groups) - 1, 2)]
+    number, unit = next(((n, u) for n, u in pairs if n), (None, None))
+    return float(number.replace(",", "")) * _SCALE.get((unit or "").lower(), 1)
+
+
+def parse_amount_filter(question: str) -> dict | None:
+    """Plain-words amount filter -> {"min", "max", "min_inclusive", "max_inclusive", "label"}, or None."""
+    m = _BETWEEN.search(question)
+    if m:
+        lo, hi = sorted(_between_values(m))
+        return {"min": lo, "max": hi, "min_inclusive": True, "max_inclusive": True,
+                "label": f"between {inr(lo)} and {inr(hi)}"}
+    out = {}
+    for pattern, key, inclusive in ((_MIN_INCL, "min", True), (_MIN_EXCL, "min", False),
+                                    (_MAX_INCL, "max", True), (_MAX_EXCL, "max", False)):
+        m = pattern.search(question)
+        if m and key not in out:
+            out[key] = _value(m)
+            out[key + "_inclusive"] = inclusive
+    if not out:
+        return None
+    words = []
+    if "min" in out:
+        words.append(f"{'at least' if out['min_inclusive'] else 'above'} {inr(out['min'])}")
+    if "max" in out:
+        words.append(f"{'at most' if out['max_inclusive'] else 'below'} {inr(out['max'])}")
+    out["label"] = " and ".join(words)
+    return out
+
+
+def _between_values(m: re.Match) -> tuple[float, float]:
+    g = m.groups()
+    return (float(g[0].replace(",", "")) * _SCALE.get((g[1] or "").lower(), 1),
+            float(g[2].replace(",", "")) * _SCALE.get((g[3] or "").lower(), 1))
+
+
+def _type_from_words(question: str) -> str | None:
+    """"payments", "spent" -> debit; "received", "income" -> credit; neither or both -> None."""
+    out, inc = _has(_OUT_WORDS, question), _has(_IN_WORDS, question)
+    return "debit" if out and not inc else "credit" if inc and not out else None
+
+
+def _amount_ok(t: dict, spec: dict) -> bool:
+    lo, hi = spec.get("min_amount"), spec.get("max_amount")
+    if lo is not None and not (t["amount"] >= lo if spec.get("min_inclusive") else t["amount"] > lo):
+        return False
+    if hi is not None and not (t["amount"] <= hi if spec.get("max_inclusive") else t["amount"] < hi):
+        return False
+    return True
+
+
+# Filters the tools cannot do. Asking for one gets an honest "can't do that", not a different answer.
+UNSUPPORTED_FILTERS = [
+    ("a day of the week, a day or a week",
+     r"\b(yesterday|today|tomorrow|last week|this week|past week|weekends?|weekdays?|monday|tuesday|wednesday|"
+     r"thursday|friday|saturday|sunday)\b"),
+    ("a specific date or date range",
+     r"\b\d{4}-\d{2}-\d{2}\b|\b(?:on|from|since|before|after|until|till|between)\s+\d{1,2}(?:st|nd|rd|th)?\b"
+     r"(?:\s+(?:and|to)\s+\d{1,2}(?:st|nd|rd|th)?)?\s*(?:of\s+)?" + _MONTHS_RE + r"|\b\d{1,2}(?:st|nd|rd|th)?\s+" + _MONTHS_RE + r"\w*\b"),
+    ("the time of day", r"\b(morning|afternoon|evening|night|midnight|\d{1,2}\s?(?:am|pm))\b"),
+    ("location", r"\b(location|city|cities|abroad|overseas|international|nearby|domestic)\b"),
+    ("payment method",
+     r"\b(?:via|through|using|by|mode of)\s+(?:upi|neft|imps|rtgs|card|credit card|debit card|cheque|cash|net ?banking)\b"),
+]
+
+
+def unsupported_filter(question: str) -> str | None:
+    for name, pattern in UNSUPPORTED_FILTERS:
+        if _has(pattern, question):
+            return name
+    return None
+
+
+UNSUPPORTED_ANSWER = ("Sorry, I can't filter by {what} yet, so I won't guess. I can filter by amount (above, below, "
+                      "between), month, category, merchant, and payments out versus payments in.")
+
+
+def _amount_spec(amount: dict | None) -> dict:
+    if not amount:
+        return {}
+    return {"min_amount": amount.get("min"), "max_amount": amount.get("max"),
+            "min_inclusive": amount.get("min_inclusive"), "max_inclusive": amount.get("max_inclusive"),
+            "amount_label": amount["label"]}
 
 
 def _has(pattern: str, text: str) -> bool:
@@ -148,15 +261,18 @@ def parse_question(question: str, categories: list[str], merchants: list[str],
     word = _longest_word_match(question, CATEGORY_WORDS)
     category = CATEGORY_WORDS[word] if word and CATEGORY_WORDS[word] in categories else None
     merchant = _longest_word_match(question, merchants)
-    intent = _parse_intent(question, len(found_months), bool(found_months or category or merchant))
+    amount = parse_amount_filter(question)
+    intent = ("list_transactions" if amount else
+              _parse_intent(question, len(found_months), bool(found_months or category or merchant)))
     return {
         "intent": intent,
         "category": category,
         "merchant": merchant,
         "month": found_months[0] if found_months else None,
         "month2": found_months[1] if len(found_months) > 1 else None,
-        "type": None,
+        "type": _type_from_words(question) if intent == "list_transactions" else None,
         "top_n": _parse_top_n(question) if intent == "top_merchants" else None,
+        **_amount_spec(amount),
     }
 
 
@@ -423,13 +539,50 @@ def _anomalies(txns, spec):
         f"I found {_plural(len(flags), 'unusual transaction')}: " + " ".join(numbers["alerts"])
 
 
+LIST_SHOWN = 10
+
+
 def _list_transactions(txns, spec):
-    rows = _filter(txns, spec.get("month"), spec.get("category"), spec.get("merchant"), spec.get("type"))
+    """Count and total per direction (never debits + credits added together) plus up to 10 rows:
+    the largest matches when an amount filter is given, otherwise the most recent."""
+    rows = [t for t in _filter(txns, spec.get("month"), spec.get("category"), spec.get("merchant"), spec.get("type"))
+            if _amount_ok(t, spec)]
+    amount_label = spec.get("amount_label")
     if not rows:
-        return _no_match(spec)
-    numbers = {"transactions": len(rows), "total": _total(rows)}
-    scope = _scope(spec, numbers)
-    return numbers, rows, f"I found {_plural(len(rows), 'transaction')}{scope} totalling {inr(numbers['total'])}."
+        numbers, supporting, text = _no_match(spec)
+        if amount_label:
+            numbers = {**numbers, **{k: spec[k] for k in ("min_amount", "max_amount") if spec.get(k) is not None}}
+            text = text.replace("matching transactions", f"transactions {amount_label}")
+        return numbers, supporting, text
+
+    out_rows = [t for t in rows if t["type"] == "debit"]
+    in_rows = [t for t in rows if t["type"] == "credit"]
+    numbers = {"transactions": len(rows)}
+    for key in ("min_amount", "max_amount"):
+        if spec.get(key) is not None:
+            numbers[key] = spec[key]
+    if out_rows:
+        numbers["payments_out"] = {"count": len(out_rows), "total": _total(out_rows)}
+    if in_rows:
+        numbers["payments_in"] = {"count": len(in_rows), "total": _total(in_rows)}
+
+    scope = _scope(spec, numbers) + (f" {amount_label}" if amount_label else "")
+    parts = []
+    if out_rows:
+        parts.append(f"{_plural(len(out_rows), 'payment')} out{scope} totalling {inr(numbers['payments_out']['total'])}")
+    if in_rows:
+        parts.append(f"{_plural(len(in_rows), 'payment')} in{scope} totalling {inr(numbers['payments_in']['total'])}")
+    intro = "I found " + " and ".join(parts) + "."
+
+    if amount_label:
+        shown = sorted(rows, key=lambda t: (-t["amount"], t["date"]))[:LIST_SHOWN]
+        heading = "Top matches" if len(rows) > LIST_SHOWN else "Matches"
+    else:
+        shown = sorted(rows, key=lambda t: t["date"], reverse=True)[:LIST_SHOWN]
+        heading = "Most recent"
+    numbers["matches"] = [{"date": t["date"], "merchant": t["merchant"], "amount": t["amount"]} for t in shown]
+    items = [f"{_date_label(t['date'])} {t['merchant']} {inr(t['amount'])}" for t in shown]
+    return numbers, shown, intro, items, f"{heading}: " + "; ".join(items) + "."
 
 
 UNKNOWN_ANSWER = ("Sorry, I can't answer that yet. Try asking about spending in a month, on a "
@@ -593,10 +746,19 @@ def answer_query(question: str, transactions: list[dict], use_llm: bool = True) 
     merchants = sorted({t["merchant"] for t in txns})
     llm_on = use_llm and llm.has_api_key()
 
+    # 0. A filter the tools cannot do: say so plainly instead of answering a different question
+    unsupported = unsupported_filter(question)
+    if unsupported:
+        return {"answer": UNSUPPORTED_ANSWER.format(what=unsupported), "numbers": {}, "supporting_transactions": []}
+
     # 1. INTENT
     spec = llm.question_to_spec(question, CATEGORIES, merchants, months) if llm_on else None
     if not spec or spec["intent"] == "unknown":
         spec = parse_question(question, CATEGORIES, merchants, months)
+    amount = parse_amount_filter(question)  # plain-words amounts are read by Python in both modes
+    if amount:
+        spec = {**spec, "intent": "list_transactions", "type": _type_from_words(question) or spec.get("type"),
+                **_amount_spec(amount)}
 
     # 2. COMPUTE
     numbers, supporting, template, items, list_text = _compute(spec, txns, months)

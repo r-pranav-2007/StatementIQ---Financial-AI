@@ -39,6 +39,9 @@ Rules:
 - Everything else, i.e. one specific figure (a total, a month, a category, a merchant, a comparison,
   an average, the biggest expense, income vs expenses): call answer_query with the user's question.
   Never use answer_query for an overview or advice question.
+- Questions that list or filter transactions ("show all payments above 5000", "list my transactions"):
+  call answer_query. If the tool says it cannot filter by something, tell the user that plainly; never
+  answer a different question instead.
 - Never state a number that a tool did not return. Copy amounts exactly as the tools give them.
   Do not add, subtract or estimate amounts, give ranges, or guess savings yourself; if a new
   figure is needed, call answer_query.
@@ -117,7 +120,7 @@ UPLOAD_WORDS = r"\b(upload|uploaded|file|statement|load|import|parse|read)\b"
 RECURRING_WORDS = r"\b(subscriptions?|recurring|repeat\w*|regular payments?|standing|auto-?pay|memberships?)\b"
 # A message about money (when the model answered without any tool) -> answer_query instead.
 FINANCE_WORDS = (r"\b(spen[dt]|spending|expenses?|costs?|paid|pay|paying|save|savings?|cut|budget|income|"
-                 r"salary|earn\w*|transactions?|merchants?|categor\w+|subscriptions?|total|average|"
+                 r"salary|earn\w*|transactions?|payments?|transfers?|merchants?|categor\w+|subscriptions?|total|average|"
                  r"biggest|largest|most|compare|month|rent|bills?|food|groceries|shopping|transport|"
                  r"invest\w*|money|rs|rupees?|jan\w*|feb\w*|mar\w*|apr\w*|may|jun\w*|jul\w*|aug\w*|"
                  r"sep\w*|oct\w*|nov\w*|dec\w*)\b|\d")
