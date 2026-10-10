@@ -1,0 +1,17 @@
+# Same values as the CSS variables at the top of styles.css (the single source of truth for styling).
+[theme]
+base = "light"
+primaryColor = "#6045F5"
+backgroundColor = "#F7F7FB"
+secondaryBackgroundColor = "#FAFAFE"
+textColor = "#191936"
+borderColor = "#E8E8F1"
+font = "sans serif"
+baseRadius = "10px"
+baseFontSize = 14
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
