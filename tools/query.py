@@ -540,6 +540,10 @@ def _anomalies(txns, spec):
 
 
 LIST_SHOWN = 10
+LIST_SHORT = 5          # items written into the sentence when the full text would be too long
+LIST_MAX_WORDS = 120    # headroom under the 150-word reply limit
+LIST_CLOSING = ("To see every transaction, open Overview and scroll to All transactions, where you can "
+                "search, filter and download a CSV.")
 
 
 def _list_transactions(txns, spec):
@@ -582,7 +586,15 @@ def _list_transactions(txns, spec):
         heading = "Most recent"
     numbers["matches"] = [{"date": t["date"], "merchant": t["merchant"], "amount": t["amount"]} for t in shown]
     items = [f"{_date_label(t['date'])} {t['merchant']} {inr(t['amount'])}" for t in shown]
-    return numbers, shown, intro, items, f"{heading}: " + "; ".join(items) + "."
+    if amount_label:
+        return numbers, shown, intro, items, f"{heading}: " + "; ".join(items) + "."
+    # Plain "list all": fixed closing sentence written here, not by the AI. If the text would be too long,
+    # the sentence names only the 5 most recent (all 10 stay in numbers["matches"]).
+    text = f"{heading}: " + "; ".join(items) + ". " + LIST_CLOSING
+    if len((intro + " " + text).split()) > LIST_MAX_WORDS:
+        items = items[:LIST_SHORT]
+        text = f"{heading}: " + "; ".join(items) + ". " + LIST_CLOSING
+    return numbers, shown, intro, items, text
 
 
 UNKNOWN_ANSWER = ("Sorry, I can't answer that yet. Try asking about spending in a month, on a "

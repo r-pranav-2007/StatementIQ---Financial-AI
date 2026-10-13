@@ -72,6 +72,20 @@ for q in ["show me all that transactions", "list transactions", "show me all tra
     recent = sorted(txns, key=lambda t: t["date"], reverse=True)[:10]
     check(f"'{q}' lists the 10 most recent", [m["date"] for m in nums["matches"]] == [t["date"] for t in recent])
 
+# 2b. Fixed closing sentence (written by Python), 150-word limit, shortened to 5 items if needed.
+from tools.query import LIST_CLOSING  # noqa: E402
+
+r = ask("show me all transactions")
+check("list-all ends with the fixed closing sentence", r["answer"].endswith(LIST_CLOSING), r["answer"][-120:])
+check("list-all answer is under 150 words", len(r["answer"].split()) < 150, f"{len(r['answer'].split())} words")
+check("filtered lists do not get the closing sentence", LIST_CLOSING not in ask("payments above 5000")["answer"])
+long_names = [dict(t, merchant=t["merchant"] + " Enterprises Private Limited International") for t in txns]
+r = answer_query("list transactions", long_names, use_llm=False)
+check("too-long list: only 5 recent in the sentence, closing kept",
+      r["answer"].count(" Rs ") == 2 + 5 and r["answer"].endswith(LIST_CLOSING), r["answer"])
+check("too-long list: all 10 stay in the tool result", len(r["numbers"]["matches"]) == 10)
+check("too-long list: still under 150 words", len(r["answer"].split()) < 150)
+
 # 3. Unsupported filters get an honest answer.
 for q in ["show me payments on monday", "what did I spend yesterday", "payments between 5 and 10 June",
           "spending in the evening", "payments made abroad", "show payments via UPI"]:

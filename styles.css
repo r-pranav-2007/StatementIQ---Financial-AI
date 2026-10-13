@@ -736,3 +736,93 @@ header[data-testid="stHeader"] { background: transparent; }
 
 /* chat page: room under the last message so the input bar never covers it */
 .stApp [data-testid="stMainBlockContainer"]:has(.st-key-chat_area) { padding-bottom: 140px; }
+
+
+/* ==========================================================================
+   Chart hover popups (CSS only). One popup style for the donut, bars and category rows.
+   ========================================================================== */
+:root { --shadow-tip: 0 4px 14px rgba(79, 70, 229, 0.12); }
+.siq-tip {
+  position: absolute; z-index: 20; padding: 6px 10px; white-space: nowrap; pointer-events: none;
+  background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: var(--shadow-tip); font-size: var(--fs-label); font-weight: 600;
+  opacity: 0; transition: opacity 0.1s ease;
+}
+.siq-tip::after {
+  content: ""; position: absolute; width: 8px; height: 8px; background: var(--card);
+  border: 1px solid var(--border); transform: rotate(45deg);
+}
+/* donut: the popup sits beside the slice and flips to the side that keeps it inside the card */
+.siq-donut { position: relative; flex: none; width: 220px; height: 220px; }
+.siq-svg { display: block; overflow: visible; }
+.siq-slice { stroke: var(--bar); transition: stroke-width 0.1s ease, opacity 0.1s ease; cursor: pointer; }
+.siq-donut .siq-tip.to-left { transform: translate(calc(-100% - 12px), -50%); }
+.siq-donut .siq-tip.to-right { transform: translate(12px, -50%); }
+.siq-donut .siq-tip.to-left::after { right: -5px; top: calc(50% - 4px); border-width: 1px 1px 0 0; }
+.siq-donut .siq-tip.to-right::after { left: -5px; top: calc(50% - 4px); border-width: 0 0 1px 1px; }
+.siq-donut-hole { pointer-events: none; }
+.siq-legend-item { padding: 3px 6px; border-radius: 8px; cursor: default; transition: background 0.1s ease; }
+/* monthly bars */
+.siq-col .siq-col-bar { transition: filter 0.1s ease; }
+.siq-col:hover .siq-col-bar { filter: brightness(1.12); }
+.col-tip { left: 50%; transform: translate(-50%, calc(-100% - 28px)); }
+.col-tip.inside { transform: translate(-50%, 36px); }
+.col-tip::after { left: calc(50% - 4px); bottom: -5px; border-width: 0 1px 1px 0; }
+.col-tip.inside::after { bottom: auto; top: -5px; border-width: 1px 0 0 1px; }
+.siq-col.edge-left .col-tip { left: 0; transform: translate(0, calc(-100% - 28px)); }
+.siq-col.edge-left .col-tip.inside { transform: translate(0, 36px); }
+.siq-col.edge-right .col-tip { left: auto; right: 0; transform: translate(0, calc(-100% - 28px)); }
+.siq-col.edge-right .col-tip.inside { transform: translate(0, 36px); }
+.siq-col.edge-left .col-tip::after { left: 24px; }
+.siq-col.edge-right .col-tip::after { left: auto; right: 24px; }
+.siq-col:hover .siq-tip { opacity: 1; }
+.siq-col { cursor: default; }
+/* top categories rows: popup right above the bar */
+.siq-bar-main { position: relative; }
+.bar-tip { bottom: calc(100% - 2px); }
+.bar-tip::after { left: calc(50% - 4px); bottom: -5px; border-width: 0 1px 1px 0; }
+.siq-bar-row:hover .bar-tip { opacity: 1; }
+/* tip placement fixes: bar popups sit 30px above the bar top (or inside tall bars); donut hole clears the ring */
+.siq-donut-hole { inset: 44px; }
+.col-tip { transform: translate(-50%, -30px); }
+.col-tip.inside { transform: translate(-50%, 56px); }
+.siq-col.edge-left .col-tip { transform: translate(0, -30px); }
+.siq-col.edge-left .col-tip.inside { transform: translate(0, 56px); }
+.siq-col.edge-right .col-tip { transform: translate(0, -30px); }
+.siq-col.edge-right .col-tip.inside { transform: translate(0, 56px); }
+.bar-tip { bottom: 12px; }
+
+/* ==========================================================================
+   Overlap fixes: popups sit clear of every label; the transactions header is a solid sticky bar
+   ========================================================================== */
+:root { --th-bg: #F4F1FD; --z-tip: 50; --z-hover: 30; }
+.siq-tip { z-index: var(--z-tip); white-space: nowrap; }
+/* monthly bars: popup at least 36px above the value label; the other bars' labels hide while one is hovered */
+.siq-col:hover { z-index: var(--z-hover); }
+.col-tip { transform: translate(-50%, -56px); }
+.col-tip.inside { transform: translate(-50%, 56px); }
+.siq-col.edge-left .col-tip { transform: translate(0, -56px); }
+.siq-col.edge-left .col-tip.inside { transform: translate(0, 56px); }
+.siq-col.edge-right .col-tip { transform: translate(0, -56px); }
+.siq-col.edge-right .col-tip.inside { transform: translate(0, 56px); }
+.siq-col-val { transition: opacity 0.1s ease; }
+.siq-plot:has(.siq-col:hover) .siq-col:not(:hover) .siq-col-val { opacity: 0; }
+/* donut: every popup appears at one fixed spot above the ring, so it never covers the centre label or the legend */
+.siq-donut .donut-tip { left: 50%; top: -6px; transform: translate(-50%, -100%); }
+.siq-donut .donut-tip::after { left: calc(50% - 4px); bottom: -5px; border-width: 0 1px 1px 0; top: auto; right: auto; }
+/* top categories: popup at the right end of the bar, clear of the name on the left and the amount column */
+.siq-bar-row:hover { position: relative; z-index: var(--z-hover); }
+.bar-tip { left: auto !important; right: 0; bottom: -12px; transform: none !important; }
+.bar-tip::after { left: -5px; right: auto; bottom: auto; top: calc(50% - 4px); border-width: 0 0 1px 1px; }
+
+/* All transactions: opaque sticky header cells; rows stay static below them */
+.stApp .siq-scroll .siq-table { border-collapse: separate; border-spacing: 0; }
+.stApp .siq-scroll .siq-table thead th {
+  position: sticky; top: 0; z-index: 3; background: var(--th-bg); background-clip: padding-box;
+  border-bottom: 1px solid var(--border); box-shadow: 0 1px 0 var(--border);
+}
+.stApp .siq-scroll .siq-table tbody td { position: static; z-index: auto; border-bottom: 1px solid var(--border); }
+.stApp .siq-scroll .siq-table tbody tr:last-child td { border-bottom: 0; }
+.stApp .siq-scroll .siq-table tbody tr:nth-child(even) td { background: var(--zebra); }
+.stApp .siq-scroll .siq-table tbody tr:nth-child(odd) td { background: var(--card); }
+.stApp .siq-scroll .siq-table tbody tr:hover td { background: var(--row-hover); }

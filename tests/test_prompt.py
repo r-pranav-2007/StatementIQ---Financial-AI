@@ -16,6 +16,8 @@ RULES = {
     "full month_comparisons sentences": ["quote the full sentence from month_comparisons", "May vs April: up Rs X"],
     "one per-month saving figure, no range": ["single per-month figure per category", "never a range"],
     "supportive tone, under 120 words": ["supportive and practical", "under 120 words"],
+    "no 'the tool shows' phrasing": ['Never say "the tool shows"', '"according to the tool"', "Your most recent transactions are"],
+    "keep the closing sentence, no 'export your statement'": ["keep that sentence word for word", "Never tell the user to export or view their full bank statement"],
     "guard-related rules kept": ["Never use numbers from earlier turns", "quote category_ranking exactly"],
 }
 ok = True

@@ -3,6 +3,7 @@ everything here uses CSS classes (or CSS variables), never literal colours."""
 import math
 import re
 import zlib
+from math import pi
 from datetime import date
 from html import escape
 from pathlib import Path
@@ -132,36 +133,63 @@ def empty_state(icon_name: str, text: str, tone: str = "violet") -> str:
     return f'<div class="siq-empty">{tile(icon_name, tone, "large")}<b>{escape(text)}</b></div>'
 
 
+def _q(text: str) -> str:
+    """Escape for an HTML attribute / CSS attribute selector."""
+    return escape(text, quote=True)
+
+
 def donut(items: list[dict], total: str) -> str:
-    """CSS conic-gradient donut in the category colours, total in the centre, legend beside it."""
-    stops, start = [], 0.0
+    """SVG donut (one circle per slice, in the category colours), total in the centre, legend beside it.
+
+    Hover is CSS only: a popup per slice, the hovered slice grows, the others fade. Legend rows carry the
+    same data-cat attribute, so hovering a legend row highlights its slice too. Every <circle> also has a
+    <title> with the same text as the popup (native tooltip fallback). All numbers come from `items`."""
+    size, centre, radius, ring = 220, 110, 82, 28
+    circumference = 2 * pi * radius
+    slices, tips, legend, rules, start = [], [], [], [], 0.0
     for i in items:
-        end = start + i["share_percent"]
-        tone = CATEGORY_TONES.get(i["category"], "slate")
-        stops.append(f"var(--c-{tone}) {start:.2f}% {max(start, end - 0.4):.2f}%, var(--card) {max(start, end - 0.4):.2f}% {end:.2f}%")
-        start = end
-    gradient = ", ".join(stops) if stops else "var(--border) 0% 100%"
-    legend = "".join(
-        f'<div class="siq-legend-item tone-{CATEGORY_TONES.get(i["category"], "slate")}"><span class="siq-legend-dot"></span>'
-        f'<span class="siq-legend-name">{escape(i["category"])}</span><span class="siq-legend-pct">{i["share_percent"]}%</span></div>'
-        for i in items)
-    return (f'<div class="siq-donut-wrap"><div class="siq-donut" style="background:conic-gradient({gradient})">'
-            f'<div class="siq-donut-hole"><span>Total spent</span><b>{escape(total)}</b></div></div>'
-            f'<div class="siq-legend">{legend}</div></div>')
+        cat, tone = i["category"], CATEGORY_TONES.get(i["category"], "slate")
+        text = f"{cat} - {inr(i['total'])} - {i['share_percent']}%"
+        length = max(i["share_percent"] / 100 * circumference - 1.0, 0.5)  # 1px gap between slices
+        slices.append(
+            f'<circle class="siq-slice tone-{tone}" data-cat="{_q(cat)}" cx="{centre}" cy="{centre}" r="{radius}" '
+            f'fill="none" stroke-width="{ring}" stroke-dasharray="{length:.2f} {circumference - length:.2f}" '
+            f'stroke-dashoffset="{-start / 100 * circumference:.2f}"><title>{escape(text)}</title></circle>')
+        tips.append(f'<div class="siq-tip donut-tip" data-cat="{_q(cat)}">{escape(text)}</div>')
+        legend.append(
+            f'<div class="siq-legend-item tone-{tone}" data-cat="{_q(cat)}" title="{_q(text)}"><span class="siq-legend-dot"></span>'
+            f'<span class="siq-legend-name">{escape(cat)}</span><span class="siq-legend-pct">{i["share_percent"]}%</span></div>')
+        sel = f'[data-cat="{_q(cat)}"]'
+        rules.append(f'.siq-donut-wrap:has({sel}:hover) .siq-slice:not({sel}){{opacity:.45}}'
+                     f'.siq-donut-wrap:has({sel}:hover) .siq-slice{sel}{{stroke-width:{ring + 3}}}'
+                     f'.siq-donut-wrap:has({sel}:hover) .siq-tip{sel}{{opacity:1}}'
+                     f'.siq-donut-wrap:has({sel}:hover) .siq-legend-item{sel}{{background:var(--tone-tint)}}')
+        start += i["share_percent"]
+    svg = (f'<svg class="siq-svg" viewBox="0 0 {size} {size}" width="{size}" height="{size}" role="img" '
+           f'aria-label="Spending by category"><g transform="rotate(-90 {centre} {centre})">{"".join(slices)}</g></svg>')
+    return (f'<style>{"".join(rules)}</style><div class="siq-donut-wrap"><div class="siq-donut">{svg}'
+            f'<div class="siq-donut-hole"><span>Total spent</span><b>{escape(total)}</b></div>{"".join(tips)}</div>'
+            f'<div class="siq-legend">{"".join(legend)}</div></div>')
 
 
 def category_bars(items: list[dict], mode: str) -> str:
-    """items: [{category, total, share_percent, kind}] sorted descending; a thin bar under each row shows its share."""
+    """items: [{category, total, share_percent, kind}] sorted descending. Bar width = amount / largest amount
+    (min 4%). Hovering a row pops up "Category - Rs amount - share% of total" at the end of the bar."""
     rows = []
     top = max((i["total"] for i in items), default=0) or 1
     for i in items:
         value = f"{i['share_percent']}%" if mode == "Percentage" else inr(i["total"])
         saving = chip("saving", "green") if i.get("kind") == "saving" else ""
         tone = CATEGORY_TONES.get(i["category"], "slate")
+        width = max(4.0, i["total"] / top * 100)
+        text = f"{i['category']} - {inr(i['total'])} - {i['share_percent']}% of total"
+        tip_pos = "right:0" if width > 65 else f"left:{width:.1f}%;transform:translateX(-50%)"
         rows.append(
-            f'<div class="siq-bar-row tone-{tone}">{tile(CATEGORY_ICONS.get(i["category"], "category"), tone, "small")}'
+            f'<div class="siq-bar-row tone-{tone}" title="{_q(text)}">'
+            f'{tile(CATEGORY_ICONS.get(i["category"], "category"), tone, "small")}'
             f'<div class="siq-bar-main"><div class="siq-bar-name">{escape(i["category"])} {saving}</div>'
-            f'<div class="siq-bar-track"><div class="siq-bar-fill" style="width:{max(4.0, i["total"] / top * 100):.1f}%"></div></div></div>'
+            f'<div class="siq-bar-track"><div class="siq-bar-fill" style="width:{width:.1f}%"></div></div>'
+            f'<div class="siq-tip bar-tip" style="{tip_pos}">{escape(text)}</div></div>'
             f'<div class="siq-bar-val">{value}</div></div>')
     return f'<div class="siq-bars">{"".join(rows)}</div>'
 
@@ -181,16 +209,26 @@ def _nice_max(v: float) -> float:
 
 
 def monthly_columns(months: list[tuple[str, float]]) -> str:
-    """months: [("2026-04", total)] -> a column chart with month names and a Rs axis."""
+    """months: [("2026-04", total)] -> a column chart with month names and a Rs axis.
+    Hovering a bar pops up "Apr 2026: Rs 35,569 (18.2%)" (same totals that draw the bars)."""
     top = _nice_max(max((t for _, t in months), default=0))
+    grand = sum(t for _, t in months) or 1
     axis = "".join(f"<span>{_axis_label(top * k / 4)}</span>" for k in (4, 3, 2, 1, 0))
     lines = "".join("<div></div>" for _ in range(5))
-    cols = "".join(
-        f'<div class="siq-col"><div class="siq-col-val" style="bottom:{t / top * 100:.1f}%">{inr(t)}</div>'
-        f'<div class="siq-col-bar" style="height:{t / top * 100:.1f}%"></div>'
-        f'<div class="siq-col-label">{escape(month_name(m))}</div></div>' for m, t in months)
+    cols = []
+    for n, (m, t) in enumerate(months):
+        pct = t / top * 100
+        text = f"{month_name(m)}: {inr(t)} ({t / grand * 100:.1f}%)"
+        edge = "edge-left" if n == 0 and len(months) > 1 else "edge-right" if n == len(months) - 1 and len(months) > 1 else ""
+        inside = "inside" if pct > 70 else ""  # tall bars: the popup sits inside the bar so it stays in the card
+        cols.append(
+            f'<div class="siq-col {edge}" title="{_q(text)}">'
+            f'<div class="siq-col-val" style="bottom:{pct:.1f}%">{inr(t)}</div>'
+            f'<div class="siq-col-bar" style="height:{pct:.1f}%"></div>'
+            f'<div class="siq-tip col-tip {inside}" style="bottom:{pct:.1f}%">{escape(text)}</div>'
+            f'<div class="siq-col-label">{escape(month_name(m))}</div></div>')
     return (f'<div class="siq-chart"><div class="siq-axis">{axis}</div>'
-            f'<div class="siq-plot"><div class="siq-grid-lines">{lines}</div>{cols}</div></div>')
+            f'<div class="siq-plot"><div class="siq-grid-lines">{lines}</div>{"".join(cols)}</div></div>')
 
 
 def _alert_parts(flag: dict) -> tuple[str, str, str, str, dict]:
